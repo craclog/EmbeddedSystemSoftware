@@ -6,9 +6,13 @@ Embedded System Software
 * Linux 3.10.17
 * Android 4.3 JellyBean
 
+## Cross-Compile (to ARM)
+```
+    arm-none-linux-gnueabi-gcc –static –o hello hello.c
+```
 ## Adb
 How to transfer files from HOST to TARGET
 ```
-   adb push [file name] /data/local/tmp 
+    adb push [file name] /data/local/tmp 
 ```
 /data/local/tmp is non-volatile
