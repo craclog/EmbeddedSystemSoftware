@@ -11,4 +11,4 @@ How to transfer files from HOST to TARGET
 ```
    adb push [file name] /data/local/tmp 
 ```
-/data/local/tmp is non-volotile
+/data/local/tmp is non-volatile
