@@ -1,4 +1,5 @@
-CC = gcc
+CC = arm-none-linux-gnueabi-gcc -static
+#CC = gcc
 
 all : processor reader writer
 processor : processor.o
