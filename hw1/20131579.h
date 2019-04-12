@@ -23,22 +23,18 @@
 /* message queue*/
 #define INPUTQ_KEY 	925
 #define OUTPUTQ_KEY 991
-
 /* input_buf */
 #define BUFF_SIZE 64
 #define FUNCTION_KEY 	0	//readkey
 #define SWITCH_KEY 		1
-
 /* input_event */
 #define KEY_RELEASE 0
 #define KEY_PRESS 	1
-
 /* output_buf */
 #define FIX_FND 	1
 #define FIX_LED 	2
 #define FIX_TEXT 	4
 #define FIX_DOT 	8
-
 /* processor.c */
 #define DEFAULT_MODE 1
 #define MAX_MODE_NUM 4	// add to 5
@@ -55,13 +51,20 @@
 /* reader.c */
 #define FUNCTION_DEVICE "/dev/input/event0"
 #define SWITCH_DEVICE "/dev/fpga_push_switch"
-
 /* writer */
 #define FND_DEVICE "/dev/fpga_fnd"
 #define LED_DEVICE "/dev/fpga_led"
-
 #define FPGA_BASE_ADDRESS 0x08000000
 #define LED_ADDR 0x16				
+
+/* MODE_COUNTER */
+#define BASE_2 1
+#define BASE_10 2
+#define BASE_8 3
+#define BASE_4 4
+/* MODE_TEXTEDITOR */
+#define ALPHA 1
+#define NUMBER 2
 
 typedef struct {
 	long mtype;

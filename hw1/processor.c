@@ -6,32 +6,12 @@ input_buf i_msg;
 output_buf o_msg; 
 
 /* MODE_CLOCK */
-int status_mode1_changing = 0;
-struct timeval curtime, newtime, blinktime, nexttime, tmp_time;
-
-void mode1_period(){
-	if(status_mode1_changing){
-		// send led msg per 1 sec
-		gettimeofday(&tmp_time, NULL);
-		if(tmp_time.tv_sec >= blinktime.tv_sec){
-			blinktime.tv_sec = tmp_time.tv_sec + 1;
-			if(tmp_time.tv_sec % 2 == 0){
-				send_led(3);
-			} else{
-				send_led(4);
-			}
-		}
-	} else{
-		// send time per 1 min
-		gettimeofday(&tmp_time, NULL);
-		if(tmp_time.tv_sec >= nexttime.tv_sec) {
-			nexttime.tv_sec = tmp_time.tv_sec + 60;
-			curtime.tv_sec += 60;
-			int data = sec2clock(curtime.tv_sec);
-			send_fnd(data);
-		}
-	}
-}
+extern int status_mode1_changing;
+extern struct timeval curtime, newtime, blinktime, nexttime, tmp_time;
+/* MODE_COUNTER */
+extern int cnt2;
+extern int base;
+/* MODE_TEXTEDITOR */
 
 
 // send msg
@@ -63,7 +43,7 @@ void clear_mode(int mode){
 		send_fnd(0);
 		send_led(0);
 	} else if(mode == MODE_TEXTEDITOR) {
-		// init_fnd();
+		send_fnd(0);
 		// init_text();
 		// init_dot();
 	} else if(mode == MODE_DRAWBOARD) {
@@ -83,9 +63,13 @@ void init_mode(int mode){
 		send_led(1);
 		status_mode1_changing = 0;
 	} else if(mode == MODE_COUNTER){
+		cnt2 = 0;
+		base = 10;
+		send_fnd(cnt2);
+		send_led(BASE_10);
+	} else if(mode == MODE_TEXTEDITOR){
 
 	}
-	
 }
 int proc_main(){
 	gettimeofday(&curtime, NULL);
@@ -122,7 +106,7 @@ int proc_main(){
 	
 	while(1){
 		// periodic task
-		mode1_period();
+		if(mode == MODE_CLOCK) mode1_period();
 		
 		// check msg_q num
 		int rc = msgctl(inputq_keyid, IPC_STAT, &buf);
@@ -152,45 +136,30 @@ int proc_main(){
 				if(mode == 0) mode = MAX_MODE_NUM;				
 				init_mode(mode);
 			}
-			//printf("CUR MODE : %d\n", mode);
 		}
 		// receive switch key
 		else if(i_msg.type == SWITCH_KEY){
 			printf("proc::swit rcv\n");
 			if(mode == MODE_CLOCK){			
 				if(i_msg.sw_id1 == 1){	// change time
-					if(!status_mode1_changing) {
-						status_mode1_changing = 1;
-						newtime = curtime;
-						blinktime.tv_sec = curtime.tv_sec + 1;
-						nexttime.tv_sec = curtime.tv_sec + 60;
-					} else {
-						status_mode1_changing = 0;
-						gettimeofday(&curtime, NULL);
-						nexttime.tv_sec = curtime.tv_sec + 60;
-						curtime = newtime;
-						int data = sec2clock(curtime.tv_sec);
-						send_fnd(data);
-						send_led(1);
-					}
+					mode1_change_time();
 				} else if(i_msg.sw_id1 == 2){ // reset time
-					status_mode1_changing = 0;
-					gettimeofday(&curtime, NULL);
-					nexttime.tv_sec = curtime.tv_sec + 60;
-					int data = sec2clock(curtime.tv_sec);
-					send_fnd(data);
-					send_led(1);
+					mode1_reset_time();
 				} else if(i_msg.sw_id1 == 3 && status_mode1_changing){ // +1 Hour
-					newtime.tv_sec += 3600;
-					int data = sec2clock(newtime.tv_sec);
-					send_fnd(data);
+					mode1_add_hour();
 				} else if(i_msg.sw_id1 == 4 && status_mode1_changing){ // +1 min
-					newtime.tv_sec += 60;
-					int data = sec2clock(newtime.tv_sec);
-					send_fnd(data);
+					mode1_add_min();
 				}
 			} else if(mode == MODE_COUNTER){
-				
+				if(i_msg.sw_id1 == 1){	// change base(10-8-4-2-10)
+					mode2_change_base();
+				} else if(i_msg.sw_id1 == 2){ // +0100
+					mode2_add(100);
+				} else if(i_msg.sw_id1 == 3){ // +0010
+					mode2_add(10);
+				} else if(i_msg.sw_id1 == 4){ // +0001
+					mode2_add(1);
+				}
 			} else if(mode == MODE_TEXTEDITOR){
 
 			} else if(mode == MODE_DRAWBOARD){
