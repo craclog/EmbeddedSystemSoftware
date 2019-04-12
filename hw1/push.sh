@@ -1,3 +1,1 @@
-adb push processor /data/local/tmp
-adb push reader /data/local/tmp
-adb push writer /data/local/tmp
+adb push 20131579 /data/local/tmp

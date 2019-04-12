@@ -1,72 +1,102 @@
-#include "mque.h"
+#include "20131579.h"
 
-#define DEFAULT_MODE 1
-#define MAX_MODE_NUM 4	// add to 5
-
-#define BACK 158
-#define VOL_UP 115
-#define VOL_DOWN 114
-
+key_t outputq_keyid, inputq_keyid;
 int mode = DEFAULT_MODE;
-key_t inputq_keyid, outputq_keyid;	
 input_buf i_msg;
 output_buf o_msg; 
 
-// util
-void num2array(int num, char* arr){
-	int i;
-	for(i=3; i>=0; i--){
-		arr[i] = num % 10; 
-		num /= 10;
+/* MODE_CLOCK */
+int status_mode1_changing = 0;
+struct timeval curtime, newtime, blinktime, nexttime, tmp_time;
+
+void mode1_period(){
+	if(status_mode1_changing){
+		// send led msg per 1 sec
+		gettimeofday(&tmp_time, NULL);
+		if(tmp_time.tv_sec >= blinktime.tv_sec){
+			blinktime.tv_sec = tmp_time.tv_sec + 1;
+			if(tmp_time.tv_sec % 2 == 0){
+				send_led(3);
+			} else{
+				send_led(4);
+			}
+		}
+	} else{
+		// send time per 1 min
+		gettimeofday(&tmp_time, NULL);
+		if(tmp_time.tv_sec >= nexttime.tv_sec) {
+			nexttime.tv_sec = tmp_time.tv_sec + 60;
+			curtime.tv_sec += 60;
+			int data = sec2clock(curtime.tv_sec);
+			send_fnd(data);
+		}
 	}
 }
-//TODO
-void init_fnd(){
+
+
+// send msg
+void send_fnd(int data){
 	o_msg.mtype = OUTPUTQ_KEY;
 	o_msg.fix_bit = FIX_FND;
-	num2array(0, o_msg.fnd);
-	if(msgsnd(outputq_keyid, (void *)&o_msg, sizeof(output_buf), IPC_NOWAIT)) {
+	num2array(data, o_msg.fnd);
+	// printf("proc::send fnd::outkey : %d\n", outputq_keyid);
+	if(msgsnd(outputq_keyid, (void *)&o_msg, sizeof(output_buf) - sizeof(long), IPC_NOWAIT)) {
 		perror("reader::msgsnd error: ");
 		exit(1);
 	}
 }
-void init_led(){
+void send_led(int data){
 	o_msg.mtype = OUTPUTQ_KEY;
 	o_msg.fix_bit = FIX_LED;
-	o_msg.led = 0;
-	if(msgsnd(outputq_keyid, (void *)&o_msg, sizeof(output_buf), IPC_NOWAIT)) {
+	o_msg.led = (unsigned char)num2led(data);
+	if(msgsnd(outputq_keyid, (void *)&o_msg, sizeof(output_buf) - sizeof(long), IPC_NOWAIT)) {
 		perror("reader::msgsnd error: ");
 		exit(1);
 	}
-}
-void init_text(){
-}
-void init_dot(){
 }
 
 void clear_mode(int mode){
-	if(mode == 1){
-		init_fnd();
-		init_led();
-	} else if(mode == 2){
-		init_fnd();
-		init_led();
-	} else if(mode == 3) {
-		init_fnd();
-		init_text();
-		init_dot();
-	} else if(mode == 4) {
-		init_fnd();
-		init_dot();
+	if(mode == MODE_CLOCK){
+		send_fnd(0);
+		send_led(0);
+	} else if(mode == MODE_COUNTER){
+		send_fnd(0);
+		send_led(0);
+	} else if(mode == MODE_TEXTEDITOR) {
+		// init_fnd();
+		// init_text();
+		// init_dot();
+	} else if(mode == MODE_DRAWBOARD) {
+		// init_fnd();
+		// init_dot();
 	} else if(mode == 5) {
 		//TODO
 	}
 }
 
+// init mode
+void init_mode(int mode){
+	if(mode == MODE_CLOCK){
+		printf("init mode 1\n");
+		int data = sec2clock(curtime.tv_sec);
+		send_fnd(data);
+		send_led(1);
+		status_mode1_changing = 0;
+	} else if(mode == MODE_COUNTER){
 
-int main(){
-	pid_t reader_pid, writer_pid;
+	}
 	
+}
+int proc_main(){
+	gettimeofday(&curtime, NULL);
+	nexttime.tv_sec = curtime.tv_sec + 60;
+	o_msg.mtype = OUTPUTQ_KEY;
+	struct msqid_ds buf;
+
+	printf("time :   %02d:%02d\n", curtime.tv_sec/3600, (curtime.tv_sec%3600)/60);
+	
+	// msgctl((key_t)INPUTQ_KEY, IPC_RMID, 0);
+	// msgctl((key_t)OUTPUTQ_KEY, IPC_RMID, 0);
 
 	// make message queue for input process
 	inputq_keyid = msgget((key_t)INPUTQ_KEY, IPC_CREAT|0666);
@@ -80,69 +110,90 @@ int main(){
 		perror("processor::msgget error : ");
 		exit(1);
 	}
-	// make input(reader) process
-	if((reader_pid = fork()) == -1){
-		perror("reader fork error:");
-		exit(1);
-	}
-	if(reader_pid == 0){
-		char *argv[] = {"./reader"};
-		execv(argv[0], argv);
-	}
-	// make output(writer) process
-	if((writer_pid = fork()) == -1){
-		perror("writer fork error:");
-		exit(1);
-	}
-	if(writer_pid == 0){
-		char *argv[] = {"./writer"};
-		execv(argv[0], argv);
-	}
-	//initialize devices
+	usleep(10000);
+
 	// TODO
-	init_fnd();
-	init_led();
-	init_text();
-	init_dot();
+	//initialize devices
+	send_fnd(0);
+	send_led(0);
 
-
+	//Default mode == MODE_CLOCK
+	init_mode(MODE_CLOCK);
+	
 	while(1){
-		if(msgrcv(inputq_keyid, (void *)&i_msg, sizeof(input_buf), INPUTQ_KEY, 0)
-				== -1){
+		// periodic task
+		mode1_period();
+		
+		// check msg_q num
+		int rc = msgctl(inputq_keyid, IPC_STAT, &buf);
+		int msg_num = (int)(buf.msg_qnum);
+		if(msg_num <= 0) continue;	//if empty, continue	
+		if(msgrcv(inputq_keyid, (void *)&i_msg, sizeof(input_buf) - sizeof(long), 0, 0)	== -1){
 			perror("processor::msgrcv error:");
 			exit(1);
 		}
 		// receive function key
 		if(i_msg.type == FUNCTION_KEY){
+			printf("proc::func rcv\n");
 			if(i_msg.ev.code == BACK){
 				//TODO
-				
+
 				//kill children processes
 				//close all devices
 				//munmap
 				//Die
 			} else if(i_msg.ev.code == VOL_UP) {
 				clear_mode(mode);
-				mode = mode % MAX_MODE_NUM + 1;			
+				mode = mode % MAX_MODE_NUM + 1;	
+				init_mode(mode);
 			} else if(i_msg.ev.code == VOL_DOWN) {
 				clear_mode(mode);
 				mode -= 1;
 				if(mode == 0) mode = MAX_MODE_NUM;				
+				init_mode(mode);
 			}
-			printf("CUR MODE : %d\n", mode);
+			//printf("CUR MODE : %d\n", mode);
 		}
 		// receive switch key
 		else if(i_msg.type == SWITCH_KEY){
-			// printf("processor::Switch_key, sw_num:%d, sw_id1:%d", i_msg.sw_num, i_msg.sw_id1);
-			// if(i_msg.sw_num == 2) printf(", sw_id2:%d", i_msg.sw_id2);
-			// printf("\n");
-			if(mode == 1){
+			printf("proc::swit rcv\n");
+			if(mode == MODE_CLOCK){			
+				if(i_msg.sw_id1 == 1){	// change time
+					if(!status_mode1_changing) {
+						status_mode1_changing = 1;
+						newtime = curtime;
+						blinktime.tv_sec = curtime.tv_sec + 1;
+						nexttime.tv_sec = curtime.tv_sec + 60;
+					} else {
+						status_mode1_changing = 0;
+						gettimeofday(&curtime, NULL);
+						nexttime.tv_sec = curtime.tv_sec + 60;
+						curtime = newtime;
+						int data = sec2clock(curtime.tv_sec);
+						send_fnd(data);
+						send_led(1);
+					}
+				} else if(i_msg.sw_id1 == 2){ // reset time
+					status_mode1_changing = 0;
+					gettimeofday(&curtime, NULL);
+					nexttime.tv_sec = curtime.tv_sec + 60;
+					int data = sec2clock(curtime.tv_sec);
+					send_fnd(data);
+					send_led(1);
+				} else if(i_msg.sw_id1 == 3 && status_mode1_changing){ // +1 Hour
+					newtime.tv_sec += 3600;
+					int data = sec2clock(newtime.tv_sec);
+					send_fnd(data);
+				} else if(i_msg.sw_id1 == 4 && status_mode1_changing){ // +1 min
+					newtime.tv_sec += 60;
+					int data = sec2clock(newtime.tv_sec);
+					send_fnd(data);
+				}
+			} else if(mode == MODE_COUNTER){
+				
+			} else if(mode == MODE_TEXTEDITOR){
 
-			} else if(mode == 2){
-
-			} else if(mode == 3){
-
-			} else if(mode == 4){
+			} else if(mode == MODE_DRAWBOARD){
 
 			} else if(mode == 5){
 

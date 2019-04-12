@@ -1,9 +1,6 @@
-#include "mque.h"
+#include "20131579.h"
 
-#define FUNCTION_DEVICE "/dev/input/event0"
-#define SWITCH_DEVICE "/dev/fpga_push_switch"
-
-int main(){
+int input_main(){
 	key_t inputq_keyid;
 	input_buf msg;
 	int rd, fd1, fd2;
@@ -15,10 +12,12 @@ int main(){
 //	printf("sizeof ev : %d\n", (int)sizeof(struct input_event));
 	if((fd1 = open(FUNCTION_DEVICE, O_RDONLY | O_NONBLOCK)) == -1){
 		printf("%s is not a valid device\n", FUNCTION_DEVICE);
+		perror("");
 		exit(1);
 	}
 	if((fd2 = open(SWITCH_DEVICE, O_RDWR)) == -1){
 		printf("%s is not a valid device\n", SWITCH_DEVICE);
+		perror("");
 		exit(1);
 	}
 
@@ -27,18 +26,26 @@ int main(){
 		perror("reader::msgget error : ");
 		exit(1);
 	}
+	printf("reader::inputq_keyid : %d\n", inputq_keyid);
+	
+	usleep(10000);
+	msg.mtype = INPUTQ_KEY;
 	while(1){
-
-		msg.mtype = INPUTQ_KEY;
+		// usleep(100000);
+		msg.ev.code = 0;
 		// read function key
-		if((rd = read(fd1, (void *)&ev, sizeof(ev))) >= sizeof(ev)
-				&& ev.code > 100){
+		// if((rd = read(fd1, ev, sizeof(struct input_event)*BUFF_SIZE)) >= sizeof(struct input_event)){
+		if((rd = read(fd1, (void *)&ev, sizeof(struct input_event))) >= sizeof(struct input_event)){
 			msg.type = FUNCTION_KEY;
 			msg.press = ev.value;
 			msg.ev = ev;
-			if(msg.press == KEY_RELEASE){
-				if(msgsnd(inputq_keyid, (void *)&msg, sizeof(input_buf), IPC_NOWAIT)) {
-					perror("reader::msgsnd error: ");
+
+			if(ev.type == 1 && msg.press == KEY_RELEASE && msg.ev.code > 100){
+				printf("reader::send func\n");
+				printf ("Type[%d] Value[%d] Code[%d]\n", ev.type, ev.value, (ev.code));
+
+				if(msgsnd(inputq_keyid, (void *)&msg, sizeof(input_buf) - sizeof(long), IPC_NOWAIT)) {
+					perror("reader::msgsnd error");
 					exit(1);
 				}
 			}
@@ -77,7 +84,9 @@ int main(){
 			msg.sw_num = sw_num;
 			msg.sw_id1 = sw_id1;
 			msg.sw_id2 = sw_id2;
-			if(msgsnd(inputq_keyid, (void *)&msg, sizeof(input_buf), IPC_NOWAIT)) {
+			printf("reader::send switch\n");
+			// printf("switch : %d, %d\n", msg.sw_id1, msg.sw_id2);
+			if(msgsnd(inputq_keyid, (void *)&msg, sizeof(input_buf) - sizeof(long), IPC_NOWAIT)) {
 				perror("reader::msgsnd error: ");
 				exit(1);
 			}

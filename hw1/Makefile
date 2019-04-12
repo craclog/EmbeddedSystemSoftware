@@ -1,13 +1,12 @@
 CC = arm-none-linux-gnueabi-gcc -static
 #CC = gcc
 
-all : processor reader writer
-processor : processor.o
-	$(CC) -o processor processor.o
-reader : reader.o	
-	$(CC) -o reader reader.o
-writer : writer.o	
-	$(CC) -o writer writer.o
+OBJS = 20131579.o reader.o processor.o writer.o util.o
+SRCS = 20131579.c reader.c processor.c writer.c util.c
+TARGETS = 20131579
 
-clean : 
-	rm *.o processor reader writer
+$(TARGETS) : $(OBJS)
+	$(CC) -o $(TARGETS) $(OBJS)
+
+clean:
+	rm $(OBJS) $(TARGETS)

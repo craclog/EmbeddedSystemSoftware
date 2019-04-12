@@ -1,11 +1,4 @@
-#include "mque.h"
-#include <sys/mman.h>
-
-#define FND_DEVICE "/dev/fpga_fnd"
-#define LED_DEVICE "/dev/fpga_led"
-
-#define FPGA_BASE_ADDRESS 0x08000000
-#define LED_ADDR 0x16				
+#include "20131579.h"
 
 int fnd_dev, led_dev;
 unsigned long *fpga_addr = 0;
@@ -14,9 +7,12 @@ unsigned char *led_addr = 0;
 void write_fnd(unsigned char msg[4]){
 	unsigned char data[4];
 	int i=0;
+	printf("writer::fnd:");
 	for(i=0; i<4; i++){
 		data[i] = msg[i];
+		printf("%d", data[i]);
 	}
+	printf("\n");
 	if(write(fnd_dev,&data,4) == -1) {
 		perror("writer::write fnd error");
  	  	exit(1);
@@ -24,13 +20,13 @@ void write_fnd(unsigned char msg[4]){
 	// close(fnd_dev);
 }
 void write_led(unsigned char n){
-	unsigned char data;
+	unsigned char data = n;
+	printf("writer::led:%d\n", data);
 	if( (data<0) || (data>255) ) { 
 		printf("Invalid range!\n");
 		exit(1);
 	}
 	//led data register's address : 0x08000016(0x08000000+16)
-	led_addr=(unsigned char*)((void*)fpga_addr+LED_ADDR);	
 	*led_addr = data;
 }
 
@@ -39,11 +35,10 @@ void write_led(unsigned char n){
 munmap;
 close(...);
 */
-int main(){
+int output_main(){
 	key_t outputq_keyid;	
 	output_buf o_msg; 
 	
-	int i=0;
 	printf("\t\tWRITER\n");
 	// get message queue key_id
 	outputq_keyid = msgget((key_t)OUTPUTQ_KEY, IPC_CREAT|0666);
@@ -51,6 +46,8 @@ int main(){
 		perror("writer::msgget error : ");
 		exit(1);
 	}
+	printf("writer::outputq_keyid : %d\n", outputq_keyid);
+
 	// open fnd device
 	if ((fnd_dev = open(FND_DEVICE, O_RDWR)) == -1) {
 		printf("writer::Device open error : %s\n", FND_DEVICE);
@@ -69,12 +66,13 @@ int main(){
 		close(led_dev);
 		exit(1);
 	}
+	led_addr=(unsigned char*)((void*)fpga_addr+LED_ADDR);	
 
 	o_msg.mtype = OUTPUTQ_KEY;
 	while(1){
-		if(msgrcv(outputq_keyid, (void *)&o_msg, sizeof(output_buf), OUTPUTQ_KEY, 0)
+		if(msgrcv(outputq_keyid, (void *)&o_msg, sizeof(output_buf) - sizeof(long), 0, 0)
 				== -1){
-			perror("writer::msgrcv error:");
+			perror("writer::msgrcv error");
 			exit(1);
 		}
 		if(o_msg.fix_bit & FIX_FND){

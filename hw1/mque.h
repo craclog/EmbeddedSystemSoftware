@@ -17,8 +17,8 @@
 #include <string.h>
 
 /* message queue*/
-#define INPUTQ_KEY 	9258
-#define OUTPUTQ_KEY 9914
+#define INPUTQ_KEY 	92
+#define OUTPUTQ_KEY 99
 
 /* input_buf */
 #define FUNCTION_KEY 	0	//readkey
