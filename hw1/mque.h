@@ -14,18 +14,25 @@
 #include <sys/ioctl.h>
 #include <signal.h>
 #include <linux/input.h>
+#include <string.h>
 
 /* message queue*/
-#define INPUTQ_KEY 9258
+#define INPUTQ_KEY 	9258
 #define OUTPUTQ_KEY 9914
 
 /* input_buf */
-#define FUNCTION_KEY 0
-#define SWITCH_KEY 1
+#define FUNCTION_KEY 	0	//readkey
+#define SWITCH_KEY 		1
 
-/* inut_event */
+/* input_event */
 #define KEY_RELEASE 0
-#define KEY_PRESS 1
+#define KEY_PRESS 	1
+
+/* output_buf */
+#define FIX_FND 	1
+#define FIX_LED 	2
+#define FIX_TEXT 	4
+#define FIX_DOT 	8
 
 typedef struct {
 	long mtype;
@@ -36,5 +43,14 @@ typedef struct {
 	unsigned char sw_id1, sw_id2;
 }input_buf;
 
+typedef struct {
+	long mtype;
+	int fix_bit;
+	unsigned char fnd[4];	//minute
+	unsigned char led;	// Binary num
+	unsigned char* text; 
+	int text_size;
+	int dot[10];
+}output_buf;
 
 #endif
