@@ -1,9 +1,14 @@
 #include "20131579.h"
 
 /* MODE_COUNTER */
-int cnt2;
-int base;
+int cnt2; /* count switch click */
+int base; /* base of number */
 
+/*
+ * input: Changing Num, base from, base to
+ * return: Changed Num
+ * Transform num with another base
+ */
 int base_tran(int n, int from, int to){
 	int tmp = 0, res = 0;
 	int mul = 1;
@@ -22,6 +27,10 @@ int base_tran(int n, int from, int to){
 	}
 	return res;
 }
+/*
+ * Change base && update LED
+ * order : 10 - 8 - 4 - 2 - 10
+ */
 void mode2_change_base(){
 	int new_base;
 	if(base == 10) {new_base = 8; send_led(BASE_8);}
@@ -32,6 +41,9 @@ void mode2_change_base(){
 	base = new_base;
 	send_fnd(cnt2);
 }
+/*
+ * Add num to counter with base
+ */
 void mode2_add(int n){
 	cnt2 = base_tran(cnt2, base, 10) + base_tran(n, base, 10);
 	cnt2 = base_tran(cnt2, 10, base) % 1000;

@@ -20,12 +20,12 @@
 #include <pthread.h>
 #include <semaphore.h>
 
-/* message queue*/
+/* message queue key */
 #define INPUTQ_KEY 	925
 #define OUTPUTQ_KEY 991
 /* input_buf */
 #define BUFF_SIZE 64
-#define FUNCTION_KEY 	0	//readkey
+#define FUNCTION_KEY 	0	/* == readkey */
 #define SWITCH_KEY 		1
 /* input_event */
 #define KEY_RELEASE 0
@@ -40,11 +40,11 @@
 /* processor.c */
 #define DEFAULT_MODE 1
 #define MAX_MODE_NUM 5
-
+/* function key */
 #define BACK 158
 #define VOL_UP 115
 #define VOL_DOWN 114
-
+/* mode */
 #define MODE_CLOCK 1
 #define MODE_COUNTER 2
 #define MODE_TEXTEDITOR 3
@@ -89,27 +89,27 @@
 #define OFF 0
 #define ON 1
 
-typedef struct timeval myt;
-
-typedef struct {
+typedef struct { /* msg ds for reader-processor */
 	long mtype;
-	int type;
-	int press;
-	struct input_event ev;
-	int sw_num;
+	int type; 				/* function key or switch */
+	struct input_event ev; 	/* function key ds */
+	int sw_num; 			/* # of switch input */
 	unsigned char sw_id1, sw_id2;
 }input_buf;
 
-typedef struct {
+typedef struct { /* msg ds for processor-writer */
 	long mtype;
-	int fix_bit;
-	unsigned char fnd[4];	//minute
-	unsigned char led;	// Binary num
+	int fix_bit;			/* which dev to work */
+	unsigned char fnd[4];	/* 4 digits */
+	unsigned char led;		/* Binary num */
 	unsigned char text[MAX_STR_BUFF + 1]; 
 	unsigned char hex_dot[10];
 	unsigned char buz;
 }output_buf;
 
+/* processor function */
+void num2array(int num, char* arr);
+int num2led(int num);
 void send_fnd(int data);
 void send_led(int data);
 void send_lcd(unsigned char str[MAX_STR_BUFF]);
@@ -119,3 +119,48 @@ void send_kill();
 void clear_mode(int mode);
 void init_mode(int mode);
 void init_devices();
+
+/* writer function */
+void write_fnd(unsigned char msg[4]);
+void write_led(unsigned char n);
+void write_dot(unsigned char data[10]);
+void write_lcd(unsigned char str[MAX_STR_BUFF]);
+void write_buz(unsigned char data);
+
+/* mode 1(clock) function */
+int sec2clock(int sec);
+void mode1_period();
+void mode1_change_time();
+void mode1_reset_time();
+void mode1_add_hour();
+void mode1_add_min();
+
+/* mode 2(counter) function */
+int base_tran(int n, int from, int to);
+void mode2_change_base();
+void mode2_add(int n);
+
+/* mode 3(text editor) function */
+void mode3_change_input_mode();
+void clear_text(unsigned char str[MAX_STR_BUFF + 1]);
+void mode3_insert_char(char c, int overwrite);
+void mode3_switch1(int sw_id);
+
+/* mode 4(draw board) function */
+int boundary_chk(int r, int c);
+void select_hex_dot(unsigned char data[10], int r, int c, int cmd);
+void mode4_blink();
+void clear_dot();
+void inverse_dot();
+void mode4_hide_cursor();
+void mode4_switch(int sw_id);
+
+/* mode 5(timer) function */
+struct timeval ll2time(long long n);
+long long time2ll(struct timeval t);
+int mode5_2data(struct timeval t);
+void mode5_period();
+void mode5_start();
+void mode5_switch(int sw_id);
+
+

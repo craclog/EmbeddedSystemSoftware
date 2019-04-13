@@ -1,5 +1,8 @@
 #include "20131579.h"
 
+/* 
+ * Input Process 
+ */
 int input_main(){
 	key_t inputq_keyid;
 	input_buf msg;
@@ -8,8 +11,7 @@ int input_main(){
 	unsigned char switch_buf[9], delay_buf[9];
 	int i;
 
-	printf("\tREADER\n");
-//	printf("sizeof ev : %d\n", (int)sizeof(struct input_event));
+	printf("\tREADER START\n");
 	if((fd1 = open(FUNCTION_DEVICE, O_RDONLY | O_NONBLOCK)) == -1){
 		printf("%s is not a valid device\n", FUNCTION_DEVICE);
 		perror("");
@@ -20,29 +22,21 @@ int input_main(){
 		perror("");
 		exit(1);
 	}
-
-	inputq_keyid = msgget((key_t)INPUTQ_KEY, IPC_CREAT|0666);
+	inputq_keyid = msgget((key_t)INPUTQ_KEY, IPC_CREAT|0666); /* get message queue key */
 	if(inputq_keyid == -1){
 		perror("reader::msgget error : ");
 		exit(1);
-	}
-	printf("reader::inputq_keyid : %d\n", inputq_keyid);
-	
+	}	
 	usleep(10000);
 	msg.mtype = INPUTQ_KEY;
 	while(1){
-		// usleep(100000);
 		msg.ev.code = 0;
-		// read function key
-		// if((rd = read(fd1, ev, sizeof(struct input_event)*BUFF_SIZE)) >= sizeof(struct input_event)){
-		if((rd = read(fd1, (void *)&ev, sizeof(struct input_event))) >= sizeof(struct input_event)){
+		if((rd = read(fd1, (void *)&ev, sizeof(struct input_event))) 
+			>= sizeof(struct input_event)){ /* read function key */
 			msg.type = FUNCTION_KEY;
-			msg.press = ev.value;
 			msg.ev = ev;
-
-			if(ev.type == 1 && msg.press == KEY_RELEASE && msg.ev.code > 100){
-				printf("\treader::send func::Type[%d] Value[%d] Code[%d]\n",
-					 ev.type, ev.value, ev.code);
+			if(ev.type == 1 && ev.value == KEY_RELEASE && msg.ev.code > 100){
+				printf("\treader::sendMsg functionKey\n");
 				if(msgsnd(inputq_keyid, (void *)&msg, sizeof(input_buf) - sizeof(long), IPC_NOWAIT)) {
 					perror("reader::msgsnd error");
 					exit(1);
@@ -52,9 +46,7 @@ int input_main(){
 				}
 			}
 		}
-
-		// read switch key until key release
-		read(fd2, delay_buf, sizeof(delay_buf));		
+		read(fd2, delay_buf, sizeof(delay_buf)); /* read switch key until key release */	
 		for(i=0; i<9; i++){
 			if(delay_buf[i] == 1) {
 				while(1){
@@ -64,15 +56,14 @@ int input_main(){
 						delay_buf[i] |= switch_buf[i];
 						if(switch_buf[i] == 1) cnt++;
 					}
-					if(cnt == 0) break;
+					if(cnt == 0) break; /* key release, escape loop */
 				}
 				break;
 			}
 		}
-		// get information from read
 		int sw_id1, sw_id2 = -1;
 		int sw_num = 0;
-		for(i=0; i<9; i++){
+		for(i=0; i<9; i++){ /* read data from delay buffer */
 			if(delay_buf[i] == 1) {
 				if(sw_num == 0) sw_id1 = i+1;
 				else if(sw_num == 1) sw_id2 = i+1;
@@ -81,19 +72,19 @@ int input_main(){
 			delay_buf[i] = 0;
 			switch_buf[i] = 0;
 		}
-		if(0 < sw_num && sw_num < 3 ){
+		if(0 < sw_num && sw_num < 3 ){ /* only 1 or 2 key input is valid */
 			msg.type = SWITCH_KEY;
 			msg.sw_num = sw_num;
 			msg.sw_id1 = sw_id1;
 			msg.sw_id2 = sw_id2;
-			printf("\treader::send switch\n");
-			// printf("sw_id1: %d, sw_id2: %d\n", sw_id1, sw_id2);
+			printf("\treader::sendMsg switch#\n");
 			if(msgsnd(inputq_keyid, (void *)&msg, sizeof(input_buf) - sizeof(long), IPC_NOWAIT)) {
 				perror("reader::msgsnd error: ");
 				exit(1);
 			}
 		}
 	}
+	/* close devices */
 	close(fd1);
 	close(fd2);
 	printf("\tREADER END\n");
