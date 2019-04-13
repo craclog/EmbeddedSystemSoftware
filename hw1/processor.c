@@ -12,6 +12,13 @@ extern struct timeval curtime, newtime, blinktime, nexttime, tmp_time;
 extern int cnt2;
 extern int base;
 /* MODE_TEXTEDITOR */
+extern int a1;
+extern int cnt3;
+extern int last_sw;
+extern int streak;
+extern int length;
+extern unsigned char strbuf[MAX_STR_BUFF + 1];
+extern const char button[10][3];
 
 
 // send msg
@@ -34,6 +41,25 @@ void send_led(int data){
 		exit(1);
 	}
 }
+void send_lcd(unsigned char str[MAX_STR_BUFF]){
+	printf("%s\n", str);
+	o_msg.mtype = OUTPUTQ_KEY;
+	o_msg.fix_bit = FIX_LCD;
+	strcpy(o_msg.text, str);
+	if(msgsnd(outputq_keyid, (void *)&o_msg, sizeof(output_buf) - sizeof(long), IPC_NOWAIT)) {
+		perror("reader::msgsnd error: ");
+		exit(1);
+	}
+}
+void send_dot(int data){
+	o_msg.mtype = OUTPUTQ_KEY;
+	o_msg.fix_bit = FIX_DOT;
+	o_msg.dot = data;
+	if(msgsnd(outputq_keyid, (void *)&o_msg, sizeof(output_buf) - sizeof(long), IPC_NOWAIT)) {
+		perror("reader::msgsnd error: ");
+		exit(1);
+	}
+}
 
 void clear_mode(int mode){
 	if(mode == MODE_CLOCK){
@@ -43,12 +69,13 @@ void clear_mode(int mode){
 		send_fnd(0);
 		send_led(0);
 	} else if(mode == MODE_TEXTEDITOR) {
+		clear_text(strbuf);
 		send_fnd(0);
-		// init_text();
-		// init_dot();
+		send_lcd(strbuf);
+		send_dot(DOT_CLEAR);
 	} else if(mode == MODE_DRAWBOARD) {
 		// init_fnd();
-		// init_dot();
+		send_dot(DOT_CLEAR);
 	} else if(mode == 5) {
 		//TODO
 	}
@@ -68,7 +95,13 @@ void init_mode(int mode){
 		send_fnd(cnt2);
 		send_led(BASE_10);
 	} else if(mode == MODE_TEXTEDITOR){
-
+		a1 = ALPHA;
+		cnt3 = 0;
+		streak = 0;
+		last_sw = -1;
+		length = 0;
+		clear_text(strbuf);
+		send_dot(DOT_A);
 	}
 }
 int proc_main(){
@@ -96,12 +129,14 @@ int proc_main(){
 	}
 	usleep(10000);
 
-	// TODO
 	//initialize devices
+	clear_text(strbuf);
 	send_fnd(0);
 	send_led(0);
+	send_lcd(strbuf);
+	send_dot(DOT_CLEAR);
 
-	//Default mode == MODE_CLOCK
+	//Default mode
 	init_mode(MODE_CLOCK);
 	
 	while(1){
@@ -139,7 +174,7 @@ int proc_main(){
 		}
 		// receive switch key
 		else if(i_msg.type == SWITCH_KEY){
-			printf("proc::swit rcv\n");
+			printf("proc::swit rcv, sw_num:%d\n", i_msg.sw_num);
 			if(mode == MODE_CLOCK){			
 				if(i_msg.sw_id1 == 1){	// change time
 					mode1_change_time();
@@ -161,7 +196,26 @@ int proc_main(){
 					mode2_add(1);
 				}
 			} else if(mode == MODE_TEXTEDITOR){
-
+				if(i_msg.sw_num == 1){	// edit text
+					cnt3++;
+					mode3_switch1(i_msg.sw_id1);
+				} else if(i_msg.sw_num == 2){
+					if(i_msg.sw_id1 == 2 && i_msg.sw_id2 == 3){ // clear text
+						cnt3++;
+						clear_text(strbuf);				
+					} else if(i_msg.sw_id1 == 5 && i_msg.sw_id2 == 6){ // change input mode(a-123)
+						cnt3++;
+						mode3_change_input_mode();
+					} else if(i_msg.sw_id1 == 8 && i_msg.sw_id2 == 9){ // insert space(' ')
+						cnt3++;
+						mode3_insert_char(' ', NO_OVERWRITE);
+						streak = 0;
+						last_sw = -1;
+					}
+				}
+				cnt3 %= 10000;
+				send_fnd(cnt3);
+				send_lcd(strbuf);			 
 			} else if(mode == MODE_DRAWBOARD){
 
 			} else if(mode == 5){

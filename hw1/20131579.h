@@ -33,7 +33,7 @@
 /* output_buf */
 #define FIX_FND 	1
 #define FIX_LED 	2
-#define FIX_TEXT 	4
+#define FIX_LCD 	4
 #define FIX_DOT 	8
 /* processor.c */
 #define DEFAULT_MODE 1
@@ -54,6 +54,8 @@
 /* writer */
 #define FND_DEVICE "/dev/fpga_fnd"
 #define LED_DEVICE "/dev/fpga_led"
+#define DOT_DEVICE "/dev/fpga_dot"
+#define LCD_DEVICE "/dev/fpga_text_lcd"
 #define FPGA_BASE_ADDRESS 0x08000000
 #define LED_ADDR 0x16				
 
@@ -65,6 +67,12 @@
 /* MODE_TEXTEDITOR */
 #define ALPHA 1
 #define NUMBER 2
+#define DOT_A 10
+#define DOT_CLEAR 11
+#define MAX_STR_BUFF 32
+#define LINE_BUFF 16
+#define NO_OVERWRITE 0
+#define OVERWRITE 1
 
 typedef struct {
 	long mtype;
@@ -80,12 +88,6 @@ typedef struct {
 	int fix_bit;
 	unsigned char fnd[4];	//minute
 	unsigned char led;	// Binary num
-	unsigned char* text; 
-	int text_size;
-	int dot[10];
+	unsigned char text[MAX_STR_BUFF + 1]; 
+	int dot;
 }output_buf;
-
-
-/* MODE_CLOCK */
-void send_fnd(int data);
-void send_led(int data);

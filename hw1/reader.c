@@ -85,7 +85,7 @@ int input_main(){
 			msg.sw_id1 = sw_id1;
 			msg.sw_id2 = sw_id2;
 			printf("reader::send switch\n");
-			// printf("switch : %d, %d\n", msg.sw_id1, msg.sw_id2);
+			// printf("sw_id1: %d, sw_id2: %d\n", sw_id1, sw_id2);
 			if(msgsnd(inputq_keyid, (void *)&msg, sizeof(input_buf) - sizeof(long), IPC_NOWAIT)) {
 				perror("reader::msgsnd error: ");
 				exit(1);
