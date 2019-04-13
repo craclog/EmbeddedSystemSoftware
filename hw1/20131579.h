@@ -73,6 +73,14 @@
 #define LINE_BUFF 16
 #define NO_OVERWRITE 0
 #define OVERWRITE 1
+/* MODE_DRAWBOARD */
+#define HIDE_ON_BUSH 0
+#define NO_HIDE 1
+#define DOT_HEIGHT 10
+#define DOT_WIDTH 7
+#define DOT_NOSEL 0
+#define DOT_SEL 1
+#define DOT_XOR 2
 
 typedef struct {
 	long mtype;
@@ -89,5 +97,5 @@ typedef struct {
 	unsigned char fnd[4];	//minute
 	unsigned char led;	// Binary num
 	unsigned char text[MAX_STR_BUFF + 1]; 
-	int dot;
+	unsigned char hex_dot[10];
 }output_buf;

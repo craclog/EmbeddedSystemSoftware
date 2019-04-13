@@ -8,7 +8,7 @@ int last_sw;
 int streak;
 int length;
 unsigned char strbuf[MAX_STR_BUFF + 1];
-
+extern unsigned char dot_data[10];
 
 const char button[10][3] = {
     {0, 0, 0},          //padding
@@ -26,10 +26,10 @@ const char button[10][3] = {
 void mode3_change_input_mode(){
     if(a1 == ALPHA){
     	a1 = NUMBER;
-	    send_dot(1);
+	    send_dot(dot_data[1]);
 	} else if(a1 == NUMBER){
 		a1 = ALPHA;
-		send_dot(DOT_A);
+		send_dot(dot_data[DOT_A]);
 	}
 	streak = 0;
 	last_sw = -1;

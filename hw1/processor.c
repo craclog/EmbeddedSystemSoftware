@@ -5,6 +5,21 @@ int mode = DEFAULT_MODE;
 input_buf i_msg;
 output_buf o_msg; 
 
+unsigned char dot_data[12][10] = {
+	{0x3e,0x7f,0x63,0x73,0x73,0x6f,0x67,0x63,0x7f,0x3e}, // 0
+	{0x0c,0x1c,0x1c,0x0c,0x0c,0x0c,0x0c,0x0c,0x0c,0x1e}, // 1
+	{0x7e,0x7f,0x03,0x03,0x3f,0x7e,0x60,0x60,0x7f,0x7f}, // 2
+	{0xfe,0x7f,0x03,0x03,0x7f,0x7f,0x03,0x03,0x7f,0x7e}, // 3
+	{0x66,0x66,0x66,0x66,0x66,0x66,0x7f,0x7f,0x06,0x06}, // 4
+	{0x7f,0x7f,0x60,0x60,0x7e,0x7f,0x03,0x03,0x7f,0x7e}, // 5
+	{0x60,0x60,0x60,0x60,0x7e,0x7f,0x63,0x63,0x7f,0x3e}, // 6
+	{0x7f,0x7f,0x63,0x63,0x03,0x03,0x03,0x03,0x03,0x03}, // 7
+	{0x3e,0x7f,0x63,0x63,0x7f,0x7f,0x63,0x63,0x7f,0x3e}, // 8
+	{0x3e,0x7f,0x63,0x63,0x7f,0x3f,0x03,0x03,0x03,0x03}, // 9
+	{0x08,0x1C,0x36,0x36,0x77,0x7F,0x7F,0x63,0x63,0x63}, // A
+	{0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}	 //CLEAR
+};
+
 /* MODE_CLOCK */
 extern int status_mode1_changing;
 extern struct timeval curtime, newtime, blinktime, nexttime, tmp_time;
@@ -19,6 +34,13 @@ extern int streak;
 extern int length;
 extern unsigned char strbuf[MAX_STR_BUFF + 1];
 extern const char button[10][3];
+/* MODE_DRAWBOARD */
+extern int cnt4;
+extern int cur_r, cur_c;
+extern unsigned char hex_dot[10];
+extern int cur_visible;
+extern struct timeval next_blink_time, m4_cur_time;
+
 
 
 // send msg
@@ -51,10 +73,12 @@ void send_lcd(unsigned char str[MAX_STR_BUFF]){
 		exit(1);
 	}
 }
-void send_dot(int data){
+void send_dot(unsigned char data[10]){
+	int i;
 	o_msg.mtype = OUTPUTQ_KEY;
 	o_msg.fix_bit = FIX_DOT;
-	o_msg.dot = data;
+	for(i=0; i<DOT_HEIGHT; i++)
+		o_msg.hex_dot[i] = data[i];
 	if(msgsnd(outputq_keyid, (void *)&o_msg, sizeof(output_buf) - sizeof(long), IPC_NOWAIT)) {
 		perror("reader::msgsnd error: ");
 		exit(1);
@@ -72,10 +96,11 @@ void clear_mode(int mode){
 		clear_text(strbuf);
 		send_fnd(0);
 		send_lcd(strbuf);
-		send_dot(DOT_CLEAR);
+		send_dot(dot_data[DOT_CLEAR]);
 	} else if(mode == MODE_DRAWBOARD) {
-		// init_fnd();
-		send_dot(DOT_CLEAR);
+		send_fnd(0);
+		send_dot(dot_data[DOT_CLEAR]);
+		cur_visible = HIDE_ON_BUSH;
 	} else if(mode == 5) {
 		//TODO
 	}
@@ -84,7 +109,6 @@ void clear_mode(int mode){
 // init mode
 void init_mode(int mode){
 	if(mode == MODE_CLOCK){
-		printf("init mode 1\n");
 		int data = sec2clock(curtime.tv_sec);
 		send_fnd(data);
 		send_led(1);
@@ -101,7 +125,14 @@ void init_mode(int mode){
 		last_sw = -1;
 		length = 0;
 		clear_text(strbuf);
-		send_dot(DOT_A);
+		send_dot(dot_data[DOT_A]);
+	} else if(mode == MODE_DRAWBOARD){
+		cnt4 = 0;
+		cur_r = cur_c = 0;
+		cur_visible = NO_HIDE;
+		clear_dot();
+		gettimeofday(&m4_cur_time, NULL);
+        next_blink_time.tv_sec = m4_cur_time.tv_sec;
 	}
 }
 int proc_main(){
@@ -110,7 +141,7 @@ int proc_main(){
 	o_msg.mtype = OUTPUTQ_KEY;
 	struct msqid_ds buf;
 
-	printf("time :   %02d:%02d\n", curtime.tv_sec/3600, (curtime.tv_sec%3600)/60);
+	printf("Current Sys Time : %02d:%02d\n", curtime.tv_sec/3600, (curtime.tv_sec%3600)/60);
 	
 	// msgctl((key_t)INPUTQ_KEY, IPC_RMID, 0);
 	// msgctl((key_t)OUTPUTQ_KEY, IPC_RMID, 0);
@@ -134,7 +165,7 @@ int proc_main(){
 	send_fnd(0);
 	send_led(0);
 	send_lcd(strbuf);
-	send_dot(DOT_CLEAR);
+	send_dot(dot_data[DOT_CLEAR]);
 
 	//Default mode
 	init_mode(MODE_CLOCK);
@@ -142,6 +173,7 @@ int proc_main(){
 	while(1){
 		// periodic task
 		if(mode == MODE_CLOCK) mode1_period();
+		mode4_blink();
 		
 		// check msg_q num
 		int rc = msgctl(inputq_keyid, IPC_STAT, &buf);
@@ -171,12 +203,14 @@ int proc_main(){
 				if(mode == 0) mode = MAX_MODE_NUM;				
 				init_mode(mode);
 			}
+			printf("proc::Current mode = %d\n", mode);
 		}
 		// receive switch key
 		else if(i_msg.type == SWITCH_KEY){
 			printf("proc::swit rcv, sw_num:%d\n", i_msg.sw_num);
 			if(mode == MODE_CLOCK){			
-				if(i_msg.sw_id1 == 1){	// change time
+				if(i_msg.sw_num == 2);
+				else if(i_msg.sw_id1 == 1){	// change time
 					mode1_change_time();
 				} else if(i_msg.sw_id1 == 2){ // reset time
 					mode1_reset_time();
@@ -186,7 +220,8 @@ int proc_main(){
 					mode1_add_min();
 				}
 			} else if(mode == MODE_COUNTER){
-				if(i_msg.sw_id1 == 1){	// change base(10-8-4-2-10)
+				if(i_msg.sw_num == 2);
+				else if(i_msg.sw_id1 == 1){	// change base(10-8-4-2-10)
 					mode2_change_base();
 				} else if(i_msg.sw_id1 == 2){ // +0100
 					mode2_add(100);
@@ -217,7 +252,13 @@ int proc_main(){
 				send_fnd(cnt3);
 				send_lcd(strbuf);			 
 			} else if(mode == MODE_DRAWBOARD){
-
+				if(i_msg.sw_num == 2);
+				else {
+					cnt4 = (cnt4 + 1) % 10000;
+					mode4_switch(i_msg.sw_id1);				
+					send_fnd(cnt4);
+					send_dot(hex_dot);
+				}
 			} else if(mode == 5){
 
 			}

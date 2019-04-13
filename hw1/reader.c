@@ -41,9 +41,8 @@ int input_main(){
 			msg.ev = ev;
 
 			if(ev.type == 1 && msg.press == KEY_RELEASE && msg.ev.code > 100){
-				printf("reader::send func\n");
-				printf ("Type[%d] Value[%d] Code[%d]\n", ev.type, ev.value, (ev.code));
-
+				printf("\treader::send func::Type[%d] Value[%d] Code[%d]\n",
+					 ev.type, ev.value, ev.code);
 				if(msgsnd(inputq_keyid, (void *)&msg, sizeof(input_buf) - sizeof(long), IPC_NOWAIT)) {
 					perror("reader::msgsnd error");
 					exit(1);
@@ -84,7 +83,7 @@ int input_main(){
 			msg.sw_num = sw_num;
 			msg.sw_id1 = sw_id1;
 			msg.sw_id2 = sw_id2;
-			printf("reader::send switch\n");
+			printf("\treader::send switch\n");
 			// printf("sw_id1: %d, sw_id2: %d\n", sw_id1, sw_id2);
 			if(msgsnd(inputq_keyid, (void *)&msg, sizeof(input_buf) - sizeof(long), IPC_NOWAIT)) {
 				perror("reader::msgsnd error: ");
