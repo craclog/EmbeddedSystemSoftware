@@ -96,7 +96,14 @@ void send_buz(unsigned char data){
 		exit(1);
 	}
 }
-
+void send_kill(){
+	o_msg.mtype = OUTPUTQ_KEY;
+	o_msg.fix_bit = FIX_DIE;
+	if(msgsnd(outputq_keyid, (void *)&o_msg, sizeof(output_buf) - sizeof(long), IPC_NOWAIT)) {
+		perror("reader::msgsnd error: ");
+		exit(1);
+	}
+}
 void clear_mode(int mode){
 	if(mode == MODE_CLOCK){
 		send_fnd(0);
@@ -155,6 +162,14 @@ void init_mode(int mode){
 		buz_cnt = 0;
 	}
 }
+void init_devices(){
+	//initialize devices
+	clear_text(strbuf);
+	send_fnd(0);
+	send_led(0);
+	send_lcd(strbuf);
+	send_dot(dot_data[DOT_CLEAR]);
+}
 int proc_main(){
 	gettimeofday(&curtime, NULL);
 	nexttime.tv_sec = curtime.tv_sec + 60;
@@ -163,8 +178,7 @@ int proc_main(){
 
 	printf("Current Sys Time : %02d:%02d\n", curtime.tv_sec/3600, (curtime.tv_sec%3600)/60);
 	
-	// msgctl((key_t)INPUTQ_KEY, IPC_RMID, 0);
-	// msgctl((key_t)OUTPUTQ_KEY, IPC_RMID, 0);
+	
 
 	// make message queue for input process
 	inputq_keyid = msgget((key_t)INPUTQ_KEY, IPC_CREAT|0666);
@@ -180,15 +194,8 @@ int proc_main(){
 	}
 	usleep(10000);
 
-	//initialize devices
-	clear_text(strbuf);
-	send_fnd(0);
-	send_led(0);
-	send_lcd(strbuf);
-	send_dot(dot_data[DOT_CLEAR]);
-
-	//Default mode
-	init_mode(MODE_CLOCK);
+	init_devices();
+	init_mode(MODE_CLOCK); //Default mode
 	
 	while(1){
 		// periodic task
@@ -208,12 +215,9 @@ int proc_main(){
 		if(i_msg.type == FUNCTION_KEY){
 			printf("proc::func rcv\n");
 			if(i_msg.ev.code == BACK){
-				//TODO
-
-				//kill children processes
-				//close all devices
-				//munmap
-				//Die
+				init_devices();
+				send_kill();
+				break;
 			} else if(i_msg.ev.code == VOL_UP) {
 				clear_mode(mode);
 				mode = mode % MAX_MODE_NUM + 1;	
@@ -288,8 +292,11 @@ int proc_main(){
 			}
 		}
 	}
-
-
+	wait(0);
+	wait(0);
+	msgctl(inputq_keyid, IPC_RMID, 0);
+	msgctl(outputq_keyid, IPC_RMID, 0);
+	printf("PROCESSOR END\n");
 	return 0;
 }
 

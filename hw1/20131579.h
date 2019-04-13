@@ -31,6 +31,7 @@
 #define KEY_RELEASE 0
 #define KEY_PRESS 	1
 /* output_buf */
+#define FIX_DIE		0
 #define FIX_FND 	1
 #define FIX_LED 	2
 #define FIX_LCD 	4

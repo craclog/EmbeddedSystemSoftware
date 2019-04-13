@@ -47,6 +47,9 @@ int input_main(){
 					perror("reader::msgsnd error");
 					exit(1);
 				}
+				if(ev.code == BACK){
+					break;
+				}
 			}
 		}
 
@@ -91,6 +94,8 @@ int input_main(){
 			}
 		}
 	}
+	close(fd1);
+	close(fd2);
 	printf("\tREADER END\n");
 	return 0;
 }

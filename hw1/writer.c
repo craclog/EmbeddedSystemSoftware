@@ -106,7 +106,14 @@ int output_main(){
 		if(o_msg.fix_bit & FIX_LCD) write_lcd(o_msg.text);
 		if(o_msg.fix_bit & FIX_DOT)	write_dot(o_msg.hex_dot);
 		if(o_msg.fix_bit & FIX_BUZ)	write_buz(o_msg.buz);
+		if(o_msg.fix_bit == FIX_DIE) break;
 	}
+	close(fnd_dev);
+	munmap(led_addr, 4096);
+	close(led_dev);
+	close(lcd_dev);
+	close(dot_dev);
+	close(buz_dev);
 	printf("\t\tWRITER END\n");
 	return 0;
 }
