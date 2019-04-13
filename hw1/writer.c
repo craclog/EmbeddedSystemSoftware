@@ -1,6 +1,6 @@
 #include "20131579.h"
 
-int fnd_dev, led_dev, dot_dev, lcd_dev;
+int fnd_dev, led_dev, dot_dev, lcd_dev, buz_dev;
 unsigned long *fpga_addr = 0;
 unsigned char *led_addr = 0;
 
@@ -37,6 +37,10 @@ void write_dot(unsigned char data[10]){
 void write_lcd(unsigned char str[MAX_STR_BUFF]){
 	write(lcd_dev, str, MAX_STR_BUFF);
 }
+void write_buz(unsigned char data){
+	write(buz_dev, &data, 1);
+}
+
 
 //TODO
 /*
@@ -83,7 +87,12 @@ int output_main(){
 	// open text lcd device
 	if ((lcd_dev = open(LCD_DEVICE, O_WRONLY)) == -1) {
 		printf("Device open error : %s\n", LCD_DEVICE);
-		return -1;
+		exit(1);
+	}
+	// open buzzer device
+	if ((buz_dev = open(BUZ_DEVICE, O_RDWR)) == -1) {
+		printf("Device open error : %s\n",BUZ_DEVICE);
+		exit(1);
 	}
 	o_msg.mtype = OUTPUTQ_KEY;
 	while(1){
@@ -96,6 +105,7 @@ int output_main(){
 		if(o_msg.fix_bit & FIX_LED)	write_led(o_msg.led);
 		if(o_msg.fix_bit & FIX_LCD) write_lcd(o_msg.text);
 		if(o_msg.fix_bit & FIX_DOT)	write_dot(o_msg.hex_dot);
+		if(o_msg.fix_bit & FIX_BUZ)	write_buz(o_msg.buz);
 	}
 	printf("\t\tWRITER END\n");
 	return 0;

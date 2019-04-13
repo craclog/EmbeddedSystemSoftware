@@ -35,9 +35,10 @@
 #define FIX_LED 	2
 #define FIX_LCD 	4
 #define FIX_DOT 	8
+#define FIX_BUZ		16
 /* processor.c */
 #define DEFAULT_MODE 1
-#define MAX_MODE_NUM 4	// add to 5
+#define MAX_MODE_NUM 5
 
 #define BACK 158
 #define VOL_UP 115
@@ -47,6 +48,7 @@
 #define MODE_COUNTER 2
 #define MODE_TEXTEDITOR 3
 #define MODE_DRAWBOARD 4
+#define MODE_TIMER 5
 
 /* reader.c */
 #define FUNCTION_DEVICE "/dev/input/event0"
@@ -56,6 +58,7 @@
 #define LED_DEVICE "/dev/fpga_led"
 #define DOT_DEVICE "/dev/fpga_dot"
 #define LCD_DEVICE "/dev/fpga_text_lcd"
+#define BUZ_DEVICE "/dev/fpga_buzzer"
 #define FPGA_BASE_ADDRESS 0x08000000
 #define LED_ADDR 0x16				
 
@@ -81,6 +84,11 @@
 #define DOT_NOSEL 0
 #define DOT_SEL 1
 #define DOT_XOR 2
+/* MODE_TIMER */
+#define OFF 0
+#define ON 1
+
+typedef struct timeval myt;
 
 typedef struct {
 	long mtype;
@@ -98,4 +106,5 @@ typedef struct {
 	unsigned char led;	// Binary num
 	unsigned char text[MAX_STR_BUFF + 1]; 
 	unsigned char hex_dot[10];
+	unsigned char buz;
 }output_buf;

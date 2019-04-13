@@ -40,7 +40,10 @@ extern int cur_r, cur_c;
 extern unsigned char hex_dot[10];
 extern int cur_visible;
 extern struct timeval next_blink_time, m4_cur_time;
-
+/* MODE_TIMER */
+extern struct timeval m5_timer, target_time, m5_tmp_time, m5_update_time;
+extern struct timeval next_buz;
+extern int counting_down, buz_cnt;
 
 
 // send msg
@@ -84,6 +87,15 @@ void send_dot(unsigned char data[10]){
 		exit(1);
 	}
 }
+void send_buz(unsigned char data){
+	o_msg.mtype = OUTPUTQ_KEY;
+	o_msg.fix_bit = FIX_BUZ;
+	o_msg.buz = data;
+	if(msgsnd(outputq_keyid, (void *)&o_msg, sizeof(output_buf) - sizeof(long), IPC_NOWAIT)) {
+		perror("reader::msgsnd error: ");
+		exit(1);
+	}
+}
 
 void clear_mode(int mode){
 	if(mode == MODE_CLOCK){
@@ -102,7 +114,9 @@ void clear_mode(int mode){
 		send_dot(dot_data[DOT_CLEAR]);
 		cur_visible = HIDE_ON_BUSH;
 	} else if(mode == 5) {
-		//TODO
+		send_fnd(0);
+		send_buz(0);
+		counting_down = OFF;
 	}
 }
 
@@ -133,6 +147,12 @@ void init_mode(int mode){
 		clear_dot();
 		gettimeofday(&m4_cur_time, NULL);
         next_blink_time.tv_sec = m4_cur_time.tv_sec;
+	} else if(mode == MODE_TIMER){
+		counting_down = OFF;
+		m5_timer.tv_sec = 0;
+		m5_timer.tv_usec = 0;
+		next_buz.tv_sec = 0;
+		buz_cnt = 0;
 	}
 }
 int proc_main(){
@@ -173,8 +193,9 @@ int proc_main(){
 	while(1){
 		// periodic task
 		if(mode == MODE_CLOCK) mode1_period();
-		mode4_blink();
-		
+		if(counting_down == ON) mode5_period();
+		if(mode == 4) mode4_blink();
+
 		// check msg_q num
 		int rc = msgctl(inputq_keyid, IPC_STAT, &buf);
 		int msg_num = (int)(buf.msg_qnum);
@@ -260,7 +281,10 @@ int proc_main(){
 					send_dot(hex_dot);
 				}
 			} else if(mode == 5){
-
+				if(i_msg.sw_num == 2);
+				else{
+					mode5_switch(i_msg.sw_id1);
+				}
 			}
 		}
 	}

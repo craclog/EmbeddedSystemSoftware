@@ -1,6 +1,7 @@
 #include "20131579.h"
 
 // util
+
 int sec2clock(int sec){
 	int ret = 0;
 	ret = sec / 3600;
@@ -9,7 +10,6 @@ int sec2clock(int sec){
 	return ret;
 }
 void num2array(int num, char* arr){
-	// printf("util(num2array) called\n");
 	int i;
 	for(i=3; i>=0; i--){
 		arr[i] = num % 10; 
