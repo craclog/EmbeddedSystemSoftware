@@ -46,130 +46,7 @@ extern struct timeval next_buz;
 extern int counting_down, buz_cnt;
 
 
-// send msg
-void send_fnd(int data){
-	o_msg.mtype = OUTPUTQ_KEY;
-	o_msg.fix_bit = FIX_FND;
-	num2array(data, o_msg.fnd);
-	// printf("proc::send fnd::outkey : %d\n", outputq_keyid);
-	if(msgsnd(outputq_keyid, (void *)&o_msg, sizeof(output_buf) - sizeof(long), IPC_NOWAIT)) {
-		perror("reader::msgsnd error: ");
-		exit(1);
-	}
-}
-void send_led(int data){
-	o_msg.mtype = OUTPUTQ_KEY;
-	o_msg.fix_bit = FIX_LED;
-	o_msg.led = (unsigned char)num2led(data);
-	if(msgsnd(outputq_keyid, (void *)&o_msg, sizeof(output_buf) - sizeof(long), IPC_NOWAIT)) {
-		perror("reader::msgsnd error: ");
-		exit(1);
-	}
-}
-void send_lcd(unsigned char str[MAX_STR_BUFF]){
-	printf("%s\n", str);
-	o_msg.mtype = OUTPUTQ_KEY;
-	o_msg.fix_bit = FIX_LCD;
-	strcpy(o_msg.text, str);
-	if(msgsnd(outputq_keyid, (void *)&o_msg, sizeof(output_buf) - sizeof(long), IPC_NOWAIT)) {
-		perror("reader::msgsnd error: ");
-		exit(1);
-	}
-}
-void send_dot(unsigned char data[10]){
-	int i;
-	o_msg.mtype = OUTPUTQ_KEY;
-	o_msg.fix_bit = FIX_DOT;
-	for(i=0; i<DOT_HEIGHT; i++)
-		o_msg.hex_dot[i] = data[i];
-	if(msgsnd(outputq_keyid, (void *)&o_msg, sizeof(output_buf) - sizeof(long), IPC_NOWAIT)) {
-		perror("reader::msgsnd error: ");
-		exit(1);
-	}
-}
-void send_buz(unsigned char data){
-	o_msg.mtype = OUTPUTQ_KEY;
-	o_msg.fix_bit = FIX_BUZ;
-	o_msg.buz = data;
-	if(msgsnd(outputq_keyid, (void *)&o_msg, sizeof(output_buf) - sizeof(long), IPC_NOWAIT)) {
-		perror("reader::msgsnd error: ");
-		exit(1);
-	}
-}
-void send_kill(){
-	o_msg.mtype = OUTPUTQ_KEY;
-	o_msg.fix_bit = FIX_DIE;
-	if(msgsnd(outputq_keyid, (void *)&o_msg, sizeof(output_buf) - sizeof(long), IPC_NOWAIT)) {
-		perror("reader::msgsnd error: ");
-		exit(1);
-	}
-}
-void clear_mode(int mode){
-	if(mode == MODE_CLOCK){
-		send_fnd(0);
-		send_led(0);
-	} else if(mode == MODE_COUNTER){
-		send_fnd(0);
-		send_led(0);
-	} else if(mode == MODE_TEXTEDITOR) {
-		clear_text(strbuf);
-		send_fnd(0);
-		send_lcd(strbuf);
-		send_dot(dot_data[DOT_CLEAR]);
-	} else if(mode == MODE_DRAWBOARD) {
-		send_fnd(0);
-		send_dot(dot_data[DOT_CLEAR]);
-		cur_visible = HIDE_ON_BUSH;
-	} else if(mode == 5) {
-		send_fnd(0);
-		send_buz(0);
-		counting_down = OFF;
-	}
-}
 
-// init mode
-void init_mode(int mode){
-	if(mode == MODE_CLOCK){
-		int data = sec2clock(curtime.tv_sec);
-		send_fnd(data);
-		send_led(1);
-		status_mode1_changing = 0;
-	} else if(mode == MODE_COUNTER){
-		cnt2 = 0;
-		base = 10;
-		send_fnd(cnt2);
-		send_led(BASE_10);
-	} else if(mode == MODE_TEXTEDITOR){
-		a1 = ALPHA;
-		cnt3 = 0;
-		streak = 0;
-		last_sw = -1;
-		length = 0;
-		clear_text(strbuf);
-		send_dot(dot_data[DOT_A]);
-	} else if(mode == MODE_DRAWBOARD){
-		cnt4 = 0;
-		cur_r = cur_c = 0;
-		cur_visible = NO_HIDE;
-		clear_dot();
-		gettimeofday(&m4_cur_time, NULL);
-        next_blink_time.tv_sec = m4_cur_time.tv_sec;
-	} else if(mode == MODE_TIMER){
-		counting_down = OFF;
-		m5_timer.tv_sec = 0;
-		m5_timer.tv_usec = 0;
-		next_buz.tv_sec = 0;
-		buz_cnt = 0;
-	}
-}
-void init_devices(){
-	//initialize devices
-	clear_text(strbuf);
-	send_fnd(0);
-	send_led(0);
-	send_lcd(strbuf);
-	send_dot(dot_data[DOT_CLEAR]);
-}
 int proc_main(){
 	gettimeofday(&curtime, NULL);
 	nexttime.tv_sec = curtime.tv_sec + 60;
@@ -300,3 +177,126 @@ int proc_main(){
 	return 0;
 }
 
+// send msg
+void send_fnd(int data){
+	o_msg.mtype = OUTPUTQ_KEY;
+	o_msg.fix_bit = FIX_FND;
+	num2array(data, o_msg.fnd);
+	// printf("proc::send fnd::outkey : %d\n", outputq_keyid);
+	if(msgsnd(outputq_keyid, (void *)&o_msg, sizeof(output_buf) - sizeof(long), IPC_NOWAIT)) {
+		perror("reader::msgsnd error: ");
+		exit(1);
+	}
+}
+void send_led(int data){
+	o_msg.mtype = OUTPUTQ_KEY;
+	o_msg.fix_bit = FIX_LED;
+	o_msg.led = (unsigned char)num2led(data);
+	if(msgsnd(outputq_keyid, (void *)&o_msg, sizeof(output_buf) - sizeof(long), IPC_NOWAIT)) {
+		perror("reader::msgsnd error: ");
+		exit(1);
+	}
+}
+void send_lcd(unsigned char str[MAX_STR_BUFF]){
+	printf("%s\n", str);
+	o_msg.mtype = OUTPUTQ_KEY;
+	o_msg.fix_bit = FIX_LCD;
+	strcpy(o_msg.text, str);
+	if(msgsnd(outputq_keyid, (void *)&o_msg, sizeof(output_buf) - sizeof(long), IPC_NOWAIT)) {
+		perror("reader::msgsnd error: ");
+		exit(1);
+	}
+}
+void send_dot(unsigned char data[10]){
+	int i;
+	o_msg.mtype = OUTPUTQ_KEY;
+	o_msg.fix_bit = FIX_DOT;
+	for(i=0; i<DOT_HEIGHT; i++)
+		o_msg.hex_dot[i] = data[i];
+	if(msgsnd(outputq_keyid, (void *)&o_msg, sizeof(output_buf) - sizeof(long), IPC_NOWAIT)) {
+		perror("reader::msgsnd error: ");
+		exit(1);
+	}
+}
+void send_buz(unsigned char data){
+	o_msg.mtype = OUTPUTQ_KEY;
+	o_msg.fix_bit = FIX_BUZ;
+	o_msg.buz = data;
+	if(msgsnd(outputq_keyid, (void *)&o_msg, sizeof(output_buf) - sizeof(long), IPC_NOWAIT)) {
+		perror("reader::msgsnd error: ");
+		exit(1);
+	}
+}
+void send_kill(){
+	o_msg.mtype = OUTPUTQ_KEY;
+	o_msg.fix_bit = FIX_DIE;
+	if(msgsnd(outputq_keyid, (void *)&o_msg, sizeof(output_buf) - sizeof(long), IPC_NOWAIT)) {
+		perror("reader::msgsnd error: ");
+		exit(1);
+	}
+}
+void clear_mode(int mode){
+	if(mode == MODE_CLOCK){
+		send_fnd(0);
+		send_led(0);
+	} else if(mode == MODE_COUNTER){
+		send_fnd(0);
+		send_led(0);
+	} else if(mode == MODE_TEXTEDITOR) {
+		clear_text(strbuf);
+		send_fnd(0);
+		send_lcd(strbuf);
+		send_dot(dot_data[DOT_CLEAR]);
+	} else if(mode == MODE_DRAWBOARD) {
+		send_fnd(0);
+		send_dot(dot_data[DOT_CLEAR]);
+		cur_visible = HIDE_ON_BUSH;
+	} else if(mode == 5) {
+		send_fnd(0);
+		send_buz(0);
+		counting_down = OFF;
+	}
+}
+
+// init mode
+void init_mode(int mode){
+	if(mode == MODE_CLOCK){
+		int data = sec2clock(curtime.tv_sec);
+		send_fnd(data);
+		send_led(1);
+		status_mode1_changing = 0;
+	} else if(mode == MODE_COUNTER){
+		cnt2 = 0;
+		base = 10;
+		send_fnd(cnt2);
+		send_led(BASE_10);
+	} else if(mode == MODE_TEXTEDITOR){
+		a1 = ALPHA;
+		cnt3 = 0;
+		streak = 0;
+		last_sw = -1;
+		length = 0;
+		clear_text(strbuf);
+		send_dot(dot_data[DOT_A]);
+	} else if(mode == MODE_DRAWBOARD){
+		cnt4 = 0;
+		cur_r = cur_c = 0;
+		cur_visible = NO_HIDE;
+		clear_dot();
+		gettimeofday(&m4_cur_time, NULL);
+        next_blink_time.tv_sec = m4_cur_time.tv_sec;
+	} else if(mode == MODE_TIMER){
+		counting_down = OFF;
+		m5_timer.tv_sec = 0;
+		m5_timer.tv_usec = 0;
+		next_buz.tv_sec = 0;
+		buz_cnt = 0;
+	}
+}
+void init_devices(){
+	clear_text(strbuf);
+	send_fnd(0);
+	send_led(0);
+	send_lcd(strbuf);
+	send_dot(dot_data[DOT_CLEAR]);
+}

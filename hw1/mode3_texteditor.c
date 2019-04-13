@@ -8,7 +8,7 @@ int last_sw;
 int streak;
 int length;
 unsigned char strbuf[MAX_STR_BUFF + 1];
-extern unsigned char dot_data[10];
+extern unsigned char dot_data[12][10];
 
 const char button[10][3] = {
     {0, 0, 0},          //padding

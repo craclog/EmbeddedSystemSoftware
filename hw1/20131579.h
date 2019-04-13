@@ -109,3 +109,13 @@ typedef struct {
 	unsigned char hex_dot[10];
 	unsigned char buz;
 }output_buf;
+
+void send_fnd(int data);
+void send_led(int data);
+void send_lcd(unsigned char str[MAX_STR_BUFF]);
+void send_dot(unsigned char data[10]);
+void send_buz(unsigned char data);
+void send_kill();
+void clear_mode(int mode);
+void init_mode(int mode);
+void init_devices();
