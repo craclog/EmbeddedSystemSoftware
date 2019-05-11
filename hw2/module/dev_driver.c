@@ -38,11 +38,12 @@ ssize_t iom_fpga_write(struct file *inode, const char *gdata, size_t length, lof
     strncpy(name_buf, "KiyoungYoon     ", LCD_LINE_BUF_LEN);
     id_buf[LCD_LINE_BUF_LEN] = 0;
     name_buf[LCD_LINE_BUF_LEN] = 0;
-
+    id_dir = RIGHT;
+    name_dir = RIGHT;
     /* set timer */
     set_timer();
     /* update devices */
-    update_fpga_all(FIRST_UPDATE);
+    update_fpga_all();
 
 #ifdef DEBUG
     printk("iom_fpga_write::Data is...\n");
@@ -111,7 +112,8 @@ static void timer_periodic(unsigned long timeout) {
         clear_fpga_all();   /* init devices */
 		return;
 	}
-    update_fpga_all(NTH_UPDATE);
+    update_fpga_data(); /* update device data */
+    update_fpga_all(); /* update devices */
 
 	fpga_timer.timer.expires = get_jiffies_64() + (time_interval * HZ / 10);
 	fpga_timer.timer.data = (unsigned long)&fpga_timer;
@@ -119,24 +121,54 @@ static void timer_periodic(unsigned long timeout) {
 
 	add_timer(&fpga_timer.timer);
 }
+void update_fpga_data(void){
+    
+    int i;
+    /* Shift Upper LCD text (id) */
+    if(id_dir == RIGHT){
+        for(i=LCD_LINE_BUF_LEN - 1; i>0; i--){
+            id_buf[i] = id_buf[i - 1];
+        }
+        id_buf[0] = ' ';
+        if(id_buf[LCD_LINE_BUF_LEN - 1] != ' ') 
+            id_dir = LEFT;
+    } else{ /* LEFT */
+        for(i=1; i < LCD_LINE_BUF_LEN; i++){
+            id_buf[i - 1] = id_buf[i];
+        }
+        id_buf[LCD_LINE_BUF_LEN - 1] = ' ';
+        if(id_buf[0] != ' ')
+            id_dir = RIGHT;
+    }
+    /* Shift Lower LCD text (name) */
+    if(name_dir == RIGHT){
+        for(i=LCD_LINE_BUF_LEN - 1; i>0; i--){
+            name_buf[i] = name_buf[i - 1];
+        }
+        name_buf[0] = ' ';
+        if(name_buf[LCD_LINE_BUF_LEN - 1] != ' ') 
+            name_dir = LEFT;
+    } else{ /* LEFT */
+        for(i=1; i < LCD_LINE_BUF_LEN; i++){
+            name_buf[i - 1] = name_buf[i];
+        }
+        name_buf[LCD_LINE_BUF_LEN - 1] = ' ';
+        if(name_buf[0] != ' ')
+            name_dir = RIGHT;
+    }
+    /* Update fnd_value and index */
+    fnd_val = fnd_val % 8 + 1;
+    if(fnd_val == start_val)
+        fnd_idx = (fnd_idx + 1) % 4;
+    
+}
 /********************
  * Update devices
  ********************
- * Shift LCD string to right and update lcd device.
+ * Update lcd device.
  */
-void update_fpga_lcd(int status){
-    char tmp1, tmp2;
-    int i;
-    if(status == NTH_UPDATE){
-        tmp1 = id_buf[LCD_LINE_BUF_LEN - 1];
-        tmp2 = name_buf[LCD_LINE_BUF_LEN - 1];
-        for(i=LCD_LINE_BUF_LEN - 1; i>0; i--){
-            id_buf[i] = id_buf[i - 1];
-            name_buf[i] = name_buf[i - 1];
-        }
-        id_buf[0] = tmp1;
-        name_buf[0] = tmp2;
-    }
+void update_fpga_lcd(void){
+    
     strncpy(lcd_buf, id_buf, LCD_LINE_BUF_LEN);
     lcd_buf[LCD_LINE_BUF_LEN] = 0;
     strncat(lcd_buf, name_buf, LCD_LINE_BUF_LEN);
@@ -147,15 +179,9 @@ void update_fpga_lcd(int status){
 /*
  * increase counter and update fnd device.
  */
-void update_fpga_fnd(int status){
+void update_fpga_fnd(void){
     unsigned char data[4];
-    int i;
-    if(status == NTH_UPDATE){
-        fnd_val = fnd_val % 8 + 1;
-        if(fnd_val == start_val)
-            fnd_idx = (fnd_idx + 1) % 4;
-    }
-    
+    int i;  
     for(i=0; i<4; i++)
         data[i] = 0;  
     data[(int)fnd_idx] = fnd_val;  
@@ -179,9 +205,9 @@ void update_fpga_dot(void){
  * Update all devices.
  * status : FIRST_UPDATE or NTH_UPDATE
  */
-void update_fpga_all(int status){
-    update_fpga_lcd(status);
-    update_fpga_fnd(status);
+void update_fpga_all(void){
+    update_fpga_lcd();
+    update_fpga_fnd();
     update_fpga_led();
     update_fpga_dot();
 }

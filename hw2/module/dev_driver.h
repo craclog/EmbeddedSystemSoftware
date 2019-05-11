@@ -28,12 +28,12 @@
 #define IOM_FPGA_MAJOR 242
 #define IOM_FPGA_NAME "dev_driver"
 
-#define FIRST_UPDATE 1
-#define NTH_UPDATE 0
 #define SUCCESS 1
 #define LCD_LINE_BUF_LEN 16
 #define LCD_MAX_LEN 32
 #define DOT_LEN 10
+#define RIGHT 0
+#define LEFT 1
 
 #define IOCTL_SET_DATA _IOW(IOM_FPGA_MAJOR, 0, char *)
 
@@ -50,6 +50,8 @@ static char time_interval, count, fnd_idx, fnd_val, start_val;
 static char id_buf[LCD_LINE_BUF_LEN + 1];
 static char name_buf[LCD_LINE_BUF_LEN + 1];
 static char lcd_buf[LCD_MAX_LEN + 1];
+static char id_dir = RIGHT;
+static char name_dir = RIGHT;
 
 /* Define functions */
 ssize_t iom_led_write(unsigned char value);
@@ -66,11 +68,12 @@ void set_timer(void);
 static void timer_periodic(unsigned long timeout);
 
 /* update devices functions */
-void update_fpga_lcd(int status);
-void update_fpga_fnd(int status);
+void update_fpga_data(void);
+void update_fpga_lcd(void);
+void update_fpga_fnd(void);
 void update_fpga_led(void);
 void update_fpga_dot(void);
-void update_fpga_all(int status);
+void update_fpga_all(void);
 /* clear devices functions */
 void clear_fpga_lcd(void);
 void clear_fpga_fnd(void);
