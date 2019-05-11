@@ -9,9 +9,9 @@
 
 #define DEBUG
 #define FPGA_DEVICE "/dev/dev_driver"
-#define FPGA_MAJOR_NUM 242
+#define IOM_FPGA_MAJOR 242
 
-#define IOCTL_SET_DATA _IOW(FPGA_MAJOR_NUM, 0, char *)
+#define IOCTL_SET_DATA _IOW(IOM_FPGA_MAJOR, 0, char *)
 
 int main(int argc, char **argv){
     char time_interval;
@@ -19,6 +19,7 @@ int main(int argc, char **argv){
     int data_stream;
     int i;
     int tmp;
+    int ret;
 
     /* Argument validity check */
     if(argc != 4){
@@ -88,15 +89,15 @@ int main(int argc, char **argv){
 		return -1;
 	}
 
-
+    // write(dev, &data_stream, 4);
     /* Control device using ioctl */
-    /*
-    int ret = ioctl(dev, IOCTL_SET_DATA, data_stream);
+    
+    ret = ioctl(dev, IOCTL_SET_DATA, &data_stream);
     if(ret < 0){
         printf("ioctl set data failed : %d\n", ret);
         exit(-1);
     }
-    */
+    
     close(dev);
     return 0;
 }
