@@ -7,19 +7,20 @@
 #include <sys/ioctl.h>
 #include <fcntl.h>
 
-#define DEBUG
+// #define DEBUG
 #define FPGA_DEVICE "/dev/dev_driver"
 #define IOM_FPGA_MAJOR 242
 
 #define IOCTL_SET_DATA _IOW(IOM_FPGA_MAJOR, 0, char *)
 
+/* Define functions */
+void ioctl_set_data(int fd, int data_stream);
+
 int main(int argc, char **argv){
-    char time_interval;
-    char count;
+    char time_interval, count;
     int data_stream;
-    int i;
-    int tmp;
-    int ret;
+    int i, tmp;
+    int dev;
 
     /* Argument validity check */
     if(argc != 4){
@@ -71,33 +72,30 @@ int main(int argc, char **argv){
             }
         }
     }
-    
-
-    #ifdef DEBUG
-    printf("Time interval : %d\n", time_interval);
-    printf("count : %d\n", count);
-    #endif
-
-    
+        
     /* Get data steam using syscall */
     data_stream = syscall(376, time_interval, count, argv[3]);
-    printf("data stream : %d\n", data_stream);
+    
     /* FPGA_DEVICE open */
-    int dev = open(FPGA_DEVICE, O_WRONLY);
+    dev = open(FPGA_DEVICE, O_WRONLY);
 	if (dev < 0){
 		printf("%s Open Failured!\n", FPGA_DEVICE);
 		return -1;
 	}
 
-    // write(dev, &data_stream, 4);
-    /* Control device using ioctl */
+    /* Control device using ioctl */    
+    ioctl_set_data(dev, data_stream);
     
-    ret = ioctl(dev, IOCTL_SET_DATA, &data_stream);
+    close(dev);
+    return 0;
+}
+
+/* ioctl_set_data wrapper */
+void ioctl_set_data(int fd, int data_stream){
+    int ret;
+    ret = ioctl(fd, IOCTL_SET_DATA, &data_stream);
     if(ret < 0){
         printf("ioctl set data failed : %d\n", ret);
         exit(-1);
     }
-    
-    close(dev);
-    return 0;
 }
