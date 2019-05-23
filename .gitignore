@@ -3,3 +3,4 @@
 *.ko.cmd
 *.o.cmd
 *.vscode
+.tmp_versions
