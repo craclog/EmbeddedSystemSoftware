@@ -1,2 +1,2 @@
-adb push stopwatch.ko /data/local/tmp
-adb push swapp /data/local/tmp
+adb push ./module/stopwatch.ko /data/local/tmp
+adb push ./app/app /data/local/tmp
