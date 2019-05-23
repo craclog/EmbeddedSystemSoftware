@@ -20,3 +20,4 @@ clean:
 	rm -rf modules.order
 	rm -rf .tmp*
 	rm -rf .fpga*
+	rm -rf *.o.*
