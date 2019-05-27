@@ -42,6 +42,7 @@ unsigned char fnd_data[4];
 /* timer variables */
 int total_elapsed_time;
 unsigned long last_jiffies;
+unsigned long elapsed_jiffies;
 struct struct_timer_data timer_sec, timer_exit;
 int paused;
 
@@ -105,6 +106,7 @@ void initialize_device(void){
 	/* init status variable */
 	paused = STATE_INIT;
 	total_elapsed_time = 0;
+	elapsed_jiffies = 0;
 
 	/* Delete all timers */
     del_timer(&timer_sec.timer); /* Can not use del_timer_sync() in interrupt context */
@@ -133,6 +135,7 @@ irqreturn_t inter_BACK_btn(int irq, void* dev_id, struct pt_regs* reg) {
         switch(paused){
 		case STATE_RUNNING:
 			paused = STATE_PAUSED;
+			elapsed_jiffies = get_jiffies_64() - last_jiffies;
 			/* Can not use del_timer_sync() in interrupt context */
 			del_timer(&timer_sec.timer);
 			break;
@@ -150,8 +153,22 @@ irqreturn_t inter_BACK_btn(int irq, void* dev_id, struct pt_regs* reg) {
  * Print initial time(00:00) in fpga_fnd
  * ***************************************/
 irqreturn_t inter_VOLUP_btn(int irq, void* dev_id,struct pt_regs* reg) {
-
-        initialize_device();
+		
+		switch(paused){
+		case STATE_RUNNING:
+			initialize_device();
+			paused = STATE_RUNNING;
+			set_timer_timer_sec();
+			break;
+		case STATE_PAUSED:
+			initialize_device();
+			paused = STATE_PAUSED;
+			break;
+		case STATE_INIT:
+			initialize_device();
+			break;
+		}	
+		
 		return IRQ_HANDLED;
 }
 /* ***************************************
@@ -239,13 +256,13 @@ void set_timer_timer_exit(void){
 /* ***************************************
  * Resume timer_sec.
  * When timer_sec was paused and resume, this function is called.
- * timer expiration time is calculated taking into account the micro seconds.
+ * timer expiration time is calculated taking into account the micro seconds by subtracting elapsed_jiffies.
  * ***************************************/
 void resume_timer_timer_sec(void){
 	// printk(KERN_ALERT "resume::Expire time = %ld\n", last_jiffies + (1 * HZ));
 	/* Can not use del_timer_sync() in interrupt context */
     del_timer(&timer_sec.timer);
-    timer_sec.timer.expires = last_jiffies + (1 * HZ);
+    timer_sec.timer.expires = get_jiffies_64() + (1 * HZ) - elapsed_jiffies;
 	timer_sec.timer.data = (unsigned long)&timer_sec;
 	timer_sec.timer.function = timer_sec_periodic;
     add_timer(&timer_sec.timer);
@@ -274,25 +291,36 @@ static int inter_open(struct inode *minode, struct file *mfile){
 	init_waitqueue_head(&q);
 
 	/* Register irqs on a target device buttons */
+
 	// inter_HOME_btn
+	gpio_free(IMX_GPIO_NR(1,11));
+	/* gpio_free : something already using HOME_btn GPIO. 
+	So free GPIO, and request it. */
+	gpio_request(IMX_GPIO_NR(1,11), NULL); 
 	gpio_direction_input(IMX_GPIO_NR(1,11));
 	irq = gpio_to_irq(IMX_GPIO_NR(1,11));
 	printk(KERN_ALERT "IRQ Number : %d\n",irq);
 	ret=request_irq(irq, (void *)inter_HOME_btn, IRQF_TRIGGER_FALLING, "HOME", 0);
 
 	// inter_BACK_btn
+	gpio_free(IMX_GPIO_NR(1,12));
+	gpio_request(IMX_GPIO_NR(1,12), NULL); 
 	gpio_direction_input(IMX_GPIO_NR(1,12));
 	irq = gpio_to_irq(IMX_GPIO_NR(1,12));
 	printk(KERN_ALERT "IRQ Number : %d\n",irq);
 	ret=request_irq(irq, (void *)inter_BACK_btn, IRQF_TRIGGER_FALLING, "BACK", 0);
 
 	// inter_VOLUP_btn
+	gpio_free(IMX_GPIO_NR(2,15));
+	gpio_request(IMX_GPIO_NR(2,15), NULL); 
 	gpio_direction_input(IMX_GPIO_NR(2,15));
 	irq = gpio_to_irq(IMX_GPIO_NR(2,15));
 	printk(KERN_ALERT "IRQ Number : %d\n",irq);
 	ret=request_irq(irq, (void *)inter_VOLUP_btn, IRQF_TRIGGER_FALLING, "VOL+", 0);
 
 	// inter_VOLDOWN_btn
+	gpio_free(IMX_GPIO_NR(5,14));
+	gpio_request(IMX_GPIO_NR(5,14), NULL); 
 	gpio_direction_input(IMX_GPIO_NR(5,14));
 	irq = gpio_to_irq(IMX_GPIO_NR(5,14));
 	printk(KERN_ALERT "IRQ Number : %d\n",irq);
