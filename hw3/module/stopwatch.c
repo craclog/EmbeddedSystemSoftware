@@ -109,7 +109,7 @@ void initialize_device(void){
 	elapsed_jiffies = 0;
 
 	/* Delete all timers */
-    del_timer(&timer_sec.timer); /* Can not use del_timer_sync() in interrupt context */
+	del_timer(&timer_sec.timer); /* Can not use del_timer_sync() in interrupt context */
 	/* Do not delete timer_exit because the only way to 
 	 * wakeup process(exit program) is calling timer_exit_function(). */
 }
@@ -230,13 +230,13 @@ static void timer_exit_function(unsigned long timeout) {
 void set_timer_timer_sec(void){
     /* Can not use del_timer_sync() in interrupt context */
 	del_timer(&timer_sec.timer);
-    timer_sec.count = 0;
+	timer_sec.count = 0;
 	/* save current jiffies to resume timer */
 	last_jiffies = get_jiffies_64();
-    timer_sec.timer.expires = last_jiffies + (1 * HZ);
+	timer_sec.timer.expires = last_jiffies + (1 * HZ);
 	timer_sec.timer.data = (unsigned long)&timer_sec;
 	timer_sec.timer.function = timer_sec_periodic;
-    add_timer(&timer_sec.timer);
+	add_timer(&timer_sec.timer);
 }
 /* ***************************************
  * Set and add timer_exit.
@@ -245,13 +245,13 @@ void set_timer_timer_sec(void){
  * ***************************************/
 void set_timer_timer_exit(void){
 	/* Can not use del_timer_sync() in interrupt context */
-    del_timer(&timer_exit.timer);
-    timer_exit.count = 0;
+	del_timer(&timer_exit.timer);
+	timer_exit.count = 0;
 	/* After 3 seconds, set flag to waketup process */
-    timer_exit.timer.expires = get_jiffies_64() + (3 * HZ);
+	timer_exit.timer.expires = get_jiffies_64() + (3 * HZ);
 	timer_exit.timer.data = (unsigned long)&timer_exit;
 	timer_exit.timer.function = timer_exit_function;
-    add_timer(&timer_exit.timer);
+	add_timer(&timer_exit.timer);
 }
 /* ***************************************
  * Resume timer_sec.
@@ -261,11 +261,11 @@ void set_timer_timer_exit(void){
 void resume_timer_timer_sec(void){
 	// printk(KERN_ALERT "resume::Expire time = %ld\n", last_jiffies + (1 * HZ));
 	/* Can not use del_timer_sync() in interrupt context */
-    del_timer(&timer_sec.timer);
-    timer_sec.timer.expires = get_jiffies_64() + (1 * HZ) - elapsed_jiffies;
+	del_timer(&timer_sec.timer);
+	timer_sec.timer.expires = get_jiffies_64() + (1 * HZ) - elapsed_jiffies;
 	timer_sec.timer.data = (unsigned long)&timer_sec;
 	timer_sec.timer.function = timer_sec_periodic;
-    add_timer(&timer_sec.timer);
+	add_timer(&timer_sec.timer);
 }
 /* ***************************************
  * When device is opened, this function is called.
@@ -430,8 +430,8 @@ static void __exit inter_exit(void) {
 	/* release stopwatch device */
 	cdev_del(&inter_cdev);
 	unregister_chrdev_region(inter_dev, 1);
-    del_timer_sync(&timer_sec.timer);
-    del_timer_sync(&timer_exit.timer);
+	del_timer_sync(&timer_sec.timer);
+	del_timer_sync(&timer_exit.timer);
 
 	printk(KERN_ALERT "Remove Module Success \n");
 }
