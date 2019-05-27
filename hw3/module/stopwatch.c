@@ -5,6 +5,7 @@
 #include <mach/gpio.h>
 #include <linux/platform_device.h>
 #include <asm/gpio.h>
+// #include <linux/sched.h>
 #include <linux/wait.h>
 #include <linux/fs.h>
 #include <linux/init.h>
@@ -106,7 +107,7 @@ void initialize_device(void){
 	total_elapsed_time = 0;
 
 	/* Delete all timers */
-    del_timer_sync(&timer_sec.timer);
+    del_timer(&timer_sec.timer); /* Can not use del_timer_sync() in interrupt context */
 	/* Do not delete timer_exit because the only way to 
 	 * wakeup process(exit program) is calling timer_exit_function(). */
 }
@@ -132,7 +133,8 @@ irqreturn_t inter_BACK_btn(int irq, void* dev_id, struct pt_regs* reg) {
         switch(paused){
 		case STATE_RUNNING:
 			paused = STATE_PAUSED;
-			del_timer_sync(&timer_sec);
+			/* Can not use del_timer_sync() in interrupt context */
+			del_timer(&timer_sec.timer);
 			break;
 		case STATE_PAUSED:
 			paused = STATE_RUNNING;
@@ -168,7 +170,8 @@ irqreturn_t inter_VOLDOWN_btn(int irq, void* dev_id, struct pt_regs* reg) {
 		else if(gpio_get_value(IMX_GPIO_NR(5, 14)) == 1){
 			/* VOL- button released */
 			/* If pressing time is less than 3 seconds, delete timer_exit */
-			del_timer_sync(&timer_exit);
+			/* Can not use del_timer_sync() in interrupt context */
+			del_timer(&timer_exit.timer);
 		}
 		
 		return IRQ_HANDLED;
@@ -208,7 +211,8 @@ static void timer_exit_function(unsigned long timeout) {
  * timer_sec increases fpga_fnd number +1 per 1 seconds.
  * ***************************************/
 void set_timer_timer_sec(void){
-    del_timer_sync(&timer_sec.timer);
+    /* Can not use del_timer_sync() in interrupt context */
+	del_timer(&timer_sec.timer);
     timer_sec.count = 0;
 	/* save current jiffies to resume timer */
 	last_jiffies = get_jiffies_64();
@@ -223,7 +227,8 @@ void set_timer_timer_sec(void){
  * If button pressed for 3 seconds, set flag to wakeup process.
  * ***************************************/
 void set_timer_timer_exit(void){
-    del_timer_sync(&timer_exit.timer);
+	/* Can not use del_timer_sync() in interrupt context */
+    del_timer(&timer_exit.timer);
     timer_exit.count = 0;
 	/* After 3 seconds, set flag to waketup process */
     timer_exit.timer.expires = get_jiffies_64() + (3 * HZ);
@@ -238,8 +243,8 @@ void set_timer_timer_exit(void){
  * ***************************************/
 void resume_timer_timer_sec(void){
 	// printk(KERN_ALERT "resume::Expire time = %ld\n", last_jiffies + (1 * HZ));
-
-    del_timer_sync(&timer_sec.timer);
+	/* Can not use del_timer_sync() in interrupt context */
+    del_timer(&timer_sec.timer);
     timer_sec.timer.expires = last_jiffies + (1 * HZ);
 	timer_sec.timer.data = (unsigned long)&timer_sec;
 	timer_sec.timer.function = timer_sec_periodic;
@@ -273,25 +278,25 @@ static int inter_open(struct inode *minode, struct file *mfile){
 	gpio_direction_input(IMX_GPIO_NR(1,11));
 	irq = gpio_to_irq(IMX_GPIO_NR(1,11));
 	printk(KERN_ALERT "IRQ Number : %d\n",irq);
-	ret=request_irq(irq, inter_HOME_btn, IRQF_TRIGGER_FALLING, "HOME", 0);
+	ret=request_irq(irq, (void *)inter_HOME_btn, IRQF_TRIGGER_FALLING, "HOME", 0);
 
 	// inter_BACK_btn
 	gpio_direction_input(IMX_GPIO_NR(1,12));
 	irq = gpio_to_irq(IMX_GPIO_NR(1,12));
 	printk(KERN_ALERT "IRQ Number : %d\n",irq);
-	ret=request_irq(irq, inter_BACK_btn, IRQF_TRIGGER_FALLING, "BACK", 0);
+	ret=request_irq(irq, (void *)inter_BACK_btn, IRQF_TRIGGER_FALLING, "BACK", 0);
 
 	// inter_VOLUP_btn
 	gpio_direction_input(IMX_GPIO_NR(2,15));
 	irq = gpio_to_irq(IMX_GPIO_NR(2,15));
 	printk(KERN_ALERT "IRQ Number : %d\n",irq);
-	ret=request_irq(irq, inter_VOLUP_btn, IRQF_TRIGGER_FALLING, "VOL+", 0);
+	ret=request_irq(irq, (void *)inter_VOLUP_btn, IRQF_TRIGGER_FALLING, "VOL+", 0);
 
 	// inter_VOLDOWN_btn
 	gpio_direction_input(IMX_GPIO_NR(5,14));
 	irq = gpio_to_irq(IMX_GPIO_NR(5,14));
 	printk(KERN_ALERT "IRQ Number : %d\n",irq);
-	ret=request_irq(irq, inter_VOLDOWN_btn, IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING, "VOL-", 0);
+	ret=request_irq(irq, (void *)inter_VOLDOWN_btn, IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING, "VOL-", 0);
 
 	return 0;
 }
