@@ -72,7 +72,7 @@ public class PuzzleActivity extends AppCompatActivity {
                     if(splitted.length > 2) throw new Exception();
                     row = Integer.parseInt(splitted[0]);
                     col = Integer.parseInt(splitted[1]);
-                    if(row == 0 || col == 0 || row > 5 || col > 5) throw new Exception();
+                    if(row == 0 || col == 0 || row > 5 || col > 5 || (col == 1 && row == 1)) throw new Exception();
 
                     /* Calculate buttons' size */
                     btn_width = calc_btn_width();
@@ -81,14 +81,10 @@ public class PuzzleActivity extends AppCompatActivity {
                     generate_btn_order();  /* Generate random buttons' order */
                     generate_btns(); /* Make buttons dynamically */
 
-                    System.out.println("1");
                     /* Start Timer */
                     Intent intent_timer = new Intent(PuzzleActivity.this, MyTimerService.class);
-                    System.out.println("2");
                     if(binder != null) unbindService(connection);
-                    System.out.println("3");
                     bindService(intent_timer, connection, BIND_AUTO_CREATE);
-                    System.out.println("4");
                     gameover = false;
                     new Thread(new GetTimeThread()).start();
 
@@ -244,7 +240,7 @@ public class PuzzleActivity extends AppCompatActivity {
                 });
 
                 try{
-                    Thread.sleep(500);
+                    Thread.sleep(100);
                 } catch (InterruptedException e){
                     e.printStackTrace();
                 }

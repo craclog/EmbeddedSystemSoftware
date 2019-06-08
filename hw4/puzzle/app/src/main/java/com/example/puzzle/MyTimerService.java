@@ -58,13 +58,12 @@ public class MyTimerService extends Service {
         public void run() {
             System.out.println("Thread Run!");
             while(!gameover){
-                time++;
-                System.out.println("Time : " + time);
                 try{
                     Thread.sleep(1000);
                 }catch (InterruptedException e){
                     e.printStackTrace();
                 }
+                time++;
             }
         }
     }
