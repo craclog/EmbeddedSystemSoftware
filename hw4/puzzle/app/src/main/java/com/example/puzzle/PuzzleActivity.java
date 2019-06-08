@@ -15,9 +15,7 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
-import java.util.Collections;
-import java.util.ArrayList;
-
+import java.util.Random;
 import static java.lang.Math.abs;
 
 public class PuzzleActivity extends AppCompatActivity {
@@ -31,7 +29,6 @@ public class PuzzleActivity extends AppCompatActivity {
     Context context;
     Button[] btns;
     int[] btns_info = new int[25];
-    ArrayList<Integer> btn_order = new ArrayList<>();
 
     private boolean gameover = false;
     private int row, col;
@@ -39,10 +36,11 @@ public class PuzzleActivity extends AppCompatActivity {
     int btn_width, btn_height;
     private IMyTimerInterface binder = null;
 
+    /* Make connection and get binder */
     private ServiceConnection connection  = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
-            binder = IMyTimerInterface.Stub.asInterface(service);
+            binder = IMyTimerInterface.Stub.asInterface(service); /* Get binder from service. Now you can use getTime(). */
         }
         @Override
         public void onServiceDisconnected(ComponentName name) {
@@ -53,19 +51,20 @@ public class PuzzleActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_puzzle);
+        /* Find Buttons, plainText, LinearLayout, textView */
         make_btn = findViewById(R.id.make_btn);
         data = findViewById(R.id.input_plainText);
         main_layout = findViewById(R.id.btn_main_LinearLayout);
         clock = findViewById(R.id.time_textView);
         context = this;
 
+        /* onClickListener for make_btn. ("Make Buttons") */
         View.OnClickListener listener = new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
                 /* Clear all views(buttons) */
                 clear_layout();
-
                 try{
                     /* Parse input data */
                     splitted = data.getText().toString().trim().split("\\s+");
@@ -78,11 +77,16 @@ public class PuzzleActivity extends AppCompatActivity {
                     btn_width = calc_btn_width();
                     btn_height = calc_btn_height();
 
-                    generate_btn_order();  /* Generate random buttons' order */
+                    do{
+                        /* Generate random buttons' order.
+                         * Repeat this until initial state is not solved.*/
+                        generate_btn_order();
+                    }while(is_end_game());
                     generate_btns(); /* Make buttons dynamically */
 
                     /* Start Timer */
                     Intent intent_timer = new Intent(PuzzleActivity.this, MyTimerService.class);
+                    /* if already bind once, unbind to reset service's time */
                     if(binder != null) unbindService(connection);
                     bindService(intent_timer, connection, BIND_AUTO_CREATE);
                     gameover = false;
@@ -103,47 +107,58 @@ public class PuzzleActivity extends AppCompatActivity {
         };
         make_btn.setOnClickListener(listener);
     }
-
+    /* Clear all Buttons */
     public void clear_layout(){
         main_layout.removeAllViews();
     }
+    /* Calculate buttons' width */
     public int calc_btn_width(){
-
         int w = main_layout.getWidth();
-        int ret = (w - (col - 1)*PADDING) / col;
-        return ret;
+        return (w - (col - 1)*PADDING) / col;
     }
+    /* Calculate buttons' height */
     public int calc_btn_height(){
-
         int h = main_layout.getHeight();
-        int ret = (h - (row - 1)*PADDING) / row;
-        return ret;
+        return (h - (row - 1)*PADDING) / row;
     }
+    /* Set buttons' text random */
     public void generate_btn_order(){
-        if(!btn_order.isEmpty())
-            btn_order.clear();
-        for (int i = 0; i < row*col; i++)
-            btn_order.add(i);
-        /* Shuffle button number and set btns_info[] */
-        Collections.shuffle(btn_order);
-        for(int i=0; i<row*col; i++)
-            btns_info[i] = btn_order.get(i);
+        int[][] a = new int[5][5];
+        int[][] ndir = {{0,1}, {1,0}, {-1,0},{0,-1}};
+        int cnt = 1, dir;
+        int cur_r, cur_c, nr, nc;
 
-        /* To prevent Initial state is win-game, shuffle again. */
-        while(row*col > 1 && is_end_game()){
-            Collections.shuffle(btn_order);
-            for(int i=0; i<row*col; i++)
-                btns_info[i] = btn_order.get(i);
+        Random rand = new Random();
+        for(int i=0; i<row; i++) /* First, start with solved state. */
+            for(int j=0; j<col; j++)
+                a[i][j] = cnt++;
+        a[row-1][col-1] = 0; /* Last button is 0. */
+        cur_r = row - 1; cur_c = col - 1; /* Set 0's position. */
+        for(int i=0; i<1000; i++){
+            dir = rand.nextInt(Integer.SIZE - 1) % 4;
+            nr = cur_r + ndir[dir][0];
+            nc = cur_c + ndir[dir][1];
+            if(nr < 0 || nr >= row || nc < 0 || nc >= col) continue; /* if It is Out of boundary, continue */
+            /* Swap two buttons and modify cur 0's position */
+            a[cur_r][cur_c] = a[nr][nc];
+            a[nr][nc] = 0;
+            cur_r = nr; cur_c = nc;
         }
+        /* Fill btns_info with a */
+        for(int i=0; i<row; i++)
+            for(int j=0; j<col; j++)
+                btns_info[i*col + j] = a[i][j];
     }
+    /* OnClickListener for Buttons */
     View.OnClickListener btn_listener = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
 
             int btn_idx = v.getId();
             int num_on_btn = btns_info[btn_idx];
-
+            /* Check if it can move */
             if(is_valid_move(v, btn_idx)){
+                /* Swap two buttons */
                 btns_info[blank_idx] = num_on_btn;
                 btns_info[btn_idx] = 0;
 
@@ -162,6 +177,7 @@ public class PuzzleActivity extends AppCompatActivity {
 
         }
     };
+    /* Function for generating buttons */
     public void generate_btns(){
 
         /* Make buttons dynamically */
@@ -181,6 +197,8 @@ public class PuzzleActivity extends AppCompatActivity {
                 btns[cur_idx].setWidth(btn_width);
                 btns[cur_idx].setHeight(btn_height);
                 new_layout.addView(btns[cur_idx]);
+                /* If Button for 0, Set backgroundColor Black.
+                 * Save Button 0's position and ID. */
                 if(btns_info[cur_idx] == 0) {
                     btns[cur_idx].setBackgroundColor(Color.BLACK);
                     blank_idx = cur_idx;
@@ -192,6 +210,8 @@ public class PuzzleActivity extends AppCompatActivity {
         }
 
     }
+    /* Check whether game ends.
+     * Return true if game solved. */
     public boolean is_end_game(){
         int num_of_btn = row * col - 1;
         for(int i=0; i<num_of_btn; i++){
@@ -199,37 +219,44 @@ public class PuzzleActivity extends AppCompatActivity {
         }
         return gameover = true;
     }
+    /* From Button index, return row information. */
     public int id2row(int id){
         return id / col;
     }
+    /* From Button index, return col information. */
     public int id2col(int id){
         return id % col;
     }
+    /* Check whether it is valid movement. */
     public boolean is_valid_move(View v, int btn_idx){
 
         int btn_row = id2row(btn_idx);
         int btn_col = id2col(btn_idx);
 
-        if(btn_idx == blank_idx) return false;
-        else if(btn_row == blank_row){
+        if(btn_idx == blank_idx) return false; /* If pressed button is 0. */
+        else if(btn_row == blank_row){ /* If pressed button is beside button 0. */
             if( abs(btn_col - blank_col) <= 1) return true;
         }
-        else if(btn_col == blank_col){
+        else if(btn_col == blank_col){ /* If pressed button is beside button 0. */
             if( abs(btn_row - blank_row) <= 1) return true;
         }
         return false;
     }
+    /* Thread for get time from Service */
     private class GetTimeThread implements Runnable {
         int time_sec;
+        /* Need handler to get time from binder. */
         Handler handler = new Handler();
         @Override
         public void run() {
             while(!gameover){
-                if(binder == null) continue;
+                if(binder == null) continue; /* If disconnected. */
                 handler.post(new Runnable() {
                     @Override
                     public void run() {
                         try{
+                            /* Get time from binder.
+                             * Set MM:SS data in clock textView */
                             time_sec = binder.getTime();
                             String str = String.format("%02d:%02d", time_sec/60, time_sec%60);
                             clock.setText(str);
@@ -238,8 +265,7 @@ public class PuzzleActivity extends AppCompatActivity {
                         }
                     }
                 });
-
-                try{
+                try{ /* Check interval */
                     Thread.sleep(100);
                 } catch (InterruptedException e){
                     e.printStackTrace();
