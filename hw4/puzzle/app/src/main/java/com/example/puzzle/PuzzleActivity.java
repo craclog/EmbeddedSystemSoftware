@@ -34,16 +34,21 @@ public class PuzzleActivity extends AppCompatActivity {
     private int row, col;
     private int blank_row, blank_col, blank_idx;
     int btn_width, btn_height;
-    private IMyTimerInterface binder = null;
+    MyTimerService ms;
+    boolean isServiceOn = false;
 
     /* Make connection and get binder */
     private ServiceConnection connection  = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
-            binder = IMyTimerInterface.Stub.asInterface(service); /* Get binder from service. Now you can use getTime(). */
+            /* Get binder from service. Now you can use getTime(). */
+            MyTimerService.MyBinder mb = (MyTimerService.MyBinder) service;
+            ms = mb.getService();
+            isServiceOn = true; //
         }
         @Override
         public void onServiceDisconnected(ComponentName name) {
+            isServiceOn = false;
         }
     };
 
@@ -87,7 +92,7 @@ public class PuzzleActivity extends AppCompatActivity {
                     /* Start Timer */
                     Intent intent_timer = new Intent(PuzzleActivity.this, MyTimerService.class);
                     /* if already bind once, unbind to reset service's time */
-                    if(binder != null) unbindService(connection);
+                    if(isServiceOn) unbindService(connection);
                     bindService(intent_timer, connection, BIND_AUTO_CREATE);
                     gameover = false;
                     new Thread(new GetTimeThread()).start();
@@ -95,9 +100,9 @@ public class PuzzleActivity extends AppCompatActivity {
                 } catch (Exception e){
                     /* If splitted data's length > 2, or row == 0, or col == 0 */
                     Toast.makeText(getApplicationContext(), "Invalid input data [row(1~5) col(1~5)]", Toast.LENGTH_LONG).show();
-                    if(binder != null) {
+                    if(isServiceOn) {
                         unbindService(connection); /* Disconnect binder */
-                        binder = null;
+                        isServiceOn = false;
                     }
                     gameover = true; // To finish GetTimeThread
                     clock.setText("00:00"); // Init clock TextView
@@ -250,14 +255,15 @@ public class PuzzleActivity extends AppCompatActivity {
         @Override
         public void run() {
             while(!gameover){
-                if(binder == null) continue; /* If disconnected. */
+                if(!isServiceOn) continue; /* If disconnected. */
                 handler.post(new Runnable() {
                     @Override
                     public void run() {
                         try{
                             /* Get time from binder.
                              * Set MM:SS data in clock textView */
-                            time_sec = binder.getTime();
+                            time_sec = ms.getTime();
+                            System.out.println("time_sec :" + time_sec);
                             String str = String.format("%02d:%02d", time_sec/60, time_sec%60);
                             clock.setText(str);
                         } catch (Exception e){

@@ -2,6 +2,7 @@ package com.example.puzzle;
 
 import android.app.Service;
 import android.content.Intent;
+import android.os.Binder;
 import android.os.IBinder;
 
 
@@ -16,21 +17,22 @@ public class MyTimerService extends Service {
 
     public MyTimerService() {
     }
-    /* Binder for Activity - service communication. */
-    IMyTimerInterface.Stub binder = new IMyTimerInterface.Stub() {
+    IBinder mBinder = new MyBinder();
 
-        @Override
-        public int getTime() {
-            return time;
+    class MyBinder extends Binder {
+        MyTimerService getService(){
+            return MyTimerService.this;
         }
-    };
-
+    }
+    int getTime(){
+        return time;
+    }
     @Override
     public IBinder onBind(Intent intent) {
         System.out.println("onBind");
         time = 0;
         gameover = false;
-        return binder;
+        return mBinder; // binder
     }
 
     @Override
@@ -58,7 +60,6 @@ public class MyTimerService extends Service {
 
         @Override
         public void run() {
-            System.out.println("Thread Run!");
             while(!gameover){
                 try{
                     Thread.sleep(1000);
