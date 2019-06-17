@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".PuzzleActivity" >
+	<LinearLayout
+        android:id="@+id/upper_layout"
+        android:layout_width="match_parent"
+        android:layout_height="103dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="8dp"
+        android:orientation="horizontal">
+	    <LinearLayout
+	        android:id="@+id/line_layout"
+	        android:layout_width="800dp"
+	        android:layout_height="match_parent"
+	        android:layout_marginStart="8dp"
+	        android:layout_marginEnd="8dp"
+	        android:layout_marginBottom="8dp"
+	        android:orientation="vertical">
+        	<EditText
+		        android:id="@+id/input_plainText"
+		        android:layout_width="match_parent"
+		        android:layout_height="49dp"
+		        android:layout_marginStart="8dp"
+		        android:layout_marginTop="0dp"
+		        android:ems="10"
+		        android:inputType="textPersonName"
+		        android:textSize="24sp"/>
+		    <Button
+		        android:id="@+id/make_btn"
+		        android:layout_width="match_parent"
+		        android:layout_height="50dp"
+		        android:layout_marginStart="8dp"
+		        android:layout_marginTop="0dp"
+		        android:layout_marginEnd="8dp"
+		        android:layout_marginBottom="0dp"
+		        android:text="Make Buttons"
+		        android:textAllCaps="false"
+		        android:textSize="18sp"
+		        />
+		</LinearLayout>
+
+	    <TextView
+	        android:id="@+id/time_textView"
+	        android:layout_width="165dp"
+	        android:layout_height="match_parent"
+	        android:layout_marginStart="8dp"
+	        android:layout_marginTop="16dp"
+	        android:text="00:00"
+	        android:textAlignment="center"
+	        android:textSize="50sp" />
+
+	</LinearLayout>
+    <LinearLayout
+        android:id="@+id/btn_main_LinearLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="8dp"
+        android:orientation="vertical"></LinearLayout>
+</LinearLayout>
