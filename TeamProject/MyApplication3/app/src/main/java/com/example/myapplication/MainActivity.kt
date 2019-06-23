@@ -15,6 +15,9 @@ object GlobalVariable {
 }
 lateinit var ms : MyReaderService
 
+/*
+* /data/local/tmp에 있는 fpgas/device_driver/fpga_insmod.sh 실행할 것.
+* */
 class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -23,8 +26,8 @@ class MainActivity : AppCompatActivity() {
 
 
         GlobalVariable.fd = openSwitchFromJNI()
-        if(GlobalVariable.fd < 0) println("OPEN ERROR")
-        else println("OPEN SUCCESS")
+        if(GlobalVariable.fd < 0) println("Push_switch OPEN ERROR")
+        else println("Push_switch OPEN SUCCESS")
 
         val connection = object : ServiceConnection {
             override fun onServiceConnected(name: ComponentName, service: IBinder) {
@@ -53,6 +56,8 @@ class MainActivity : AppCompatActivity() {
         close_btn.setOnClickListener{
             closeFromJNI(GlobalVariable.fd);
             val intent = Intent(this, OmokActivity::class.java)
+            println("Sending : " + id_editText.text.toString())
+            intent.putExtra("id", id_editText.text.toString())
             startActivity(intent)
         }
         val reader = Thread(ReadDataThread())
