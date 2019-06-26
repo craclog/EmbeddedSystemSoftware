@@ -40,12 +40,6 @@ class MyReaderService : Service() {
         data = 0
         return mBinder
     }
-    override fun onUnbind(intent: Intent?): Boolean {
-        return super.onUnbind(intent)
-    }
-    override fun onDestroy() {
-        super.onDestroy()
-    }
 
     private inner class Reader : Runnable{
         override fun run() {
