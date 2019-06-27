@@ -12,6 +12,7 @@ import kotlinx.android.synthetic.main.activity_omok.*
 import kotlin.math.max
 import kotlin.math.min
 import android.os.Handler
+import android.widget.Toast
 
 
 const val USER_ID : Int = 1
@@ -26,6 +27,11 @@ const val LINE_LENGTH : Float = (LINE_NUM - 1) * LINE_INTERVAL
 var stoneInfo = Array(LINE_NUM, {IntArray(LINE_NUM)})
 var turn : Int = 1
 var gameOver : Boolean = false
+var winner : Int = 1
+var countdown : Int = 0
+var isServiceOn : Boolean = false
+lateinit var connection : ServiceConnection
+lateinit var context : Context
 
 class OmokActivity : AppCompatActivity() {
 
@@ -33,26 +39,33 @@ class OmokActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_omok)
-        myID_textView.text = intent.getStringExtra("id")
+        myID_textView.text = intent.getStringExtra("id1")
+        OpID_textView.text = intent.getStringExtra("id2")
 
         GlobalVariable.fd = openSwitchFromJNI()
+        GlobalVariable.timer_fd = openTimerFromJNI()
         if(GlobalVariable.fd < 0) println("Push_switch OPEN ERROR")
-        else println("Push_switch OPEN SUCCESS")
+        if(GlobalVariable.timer_fd < 0) println("Omokwatch OPEN ERROR")
+        println("Open Finished")
+        gameOver = false
+        context = this
+        turn = 1
 
-        val connection = object : ServiceConnection {
+        connection = object : ServiceConnection {
             override fun onServiceConnected(name: ComponentName, service: IBinder) {
                 val mb = service as MyReaderService.MyBinder
                 ms = mb.getService()
-//                isServiceOn = true //
+                isServiceOn = true //
             }
             override fun onServiceDisconnected(name: ComponentName) {
-//                isServiceOn = false
+                isServiceOn = false
             }
         }
         val readerIntent : Intent = Intent(this, MyReaderService::class.java)
-        bindService(readerIntent, connection, Context.BIND_AUTO_CREATE)
+        if(!isServiceOn) bindService(readerIntent, connection, Context.BIND_AUTO_CREATE)
         val reader = Thread(ReadDataThread())
         reader.start()
+        writeTimerFromJNI(GlobalVariable.timer_fd)
 
         highlightUser()
         drawBoard()
@@ -62,6 +75,8 @@ class OmokActivity : AppCompatActivity() {
             LockOn.move(5)
             highlightUser()
             drawBoard()
+            writeTimerFromJNI(GlobalVariable.timer_fd)
+            if(gameOver) closeGame()
         }
         left_btn.setOnClickListener {
             LockOn.move(4)
@@ -79,17 +94,27 @@ class OmokActivity : AppCompatActivity() {
             LockOn.move(8)
             drawBoard()
         }
+    } // End of onCreate()
+    override fun onStart() {
+        super.onStart()
     }
-    private fun highlightUser(){
-        /* If it's my turn, paint myID_textView Yellow.
-         * else paint OpID_textView Yellow. */
-        if(turn == 1) {
-            myID_textView.setBackgroundColor(Color.YELLOW)
-            OpID_textView.setBackgroundColor(Color.WHITE)
-        } else {
-            myID_textView.setBackgroundColor(Color.WHITE)
-            OpID_textView.setBackgroundColor(Color.YELLOW)
-        }
+
+    fun closeGame(){
+        var str = "GAME END!"
+        str += if(winner == 1) "BLACK WIN"
+        else "WHITE WIN"
+        Toast.makeText(context, str, Toast.LENGTH_SHORT).show()
+        closeFromJNI(GlobalVariable.timer_fd)
+        closeFromJNI(GlobalVariable.fd)
+        unbindService(connection)
+        isServiceOn = false
+
+        for(i in 0 until LINE_NUM)
+            for(j in 0 until LINE_NUM)
+                stoneInfo[i][j] = 0
+
+        val intent = Intent(this, MainActivity::class.java)
+        startActivity(intent)
     }
     fun drawBoard(){
         val bitmap : Bitmap = Bitmap.createBitmap(BOARD_SIZE, BOARD_SIZE, Bitmap.Config.ARGB_8888)
@@ -115,7 +140,6 @@ class OmokActivity : AppCompatActivity() {
         }
         for(i in 0 until LINE_NUM){
             for(j in 0 until LINE_NUM){
-//                println("("+i+","+ j + ") : " + stoneInfo[i][j])
                 if(stoneInfo[i][j] == 1){
                     val rect = getOval(i, j)
                     paint.style = Paint.Style.FILL_AND_STROKE
@@ -192,7 +216,10 @@ class OmokActivity : AppCompatActivity() {
                     if(stoneInfo[rowIdx][colIdx] == 0) {
                         stoneInfo[rowIdx][colIdx] = turn
                         gameOver = isGameOver(rowIdx, colIdx)
-                        if(gameOver) println("G A M E O V E R")
+                        if(gameOver) {
+                            winner = turn
+                            println("G A M E O V E R")
+                        }
                         turn = 3 - turn
                         initPosition()
                     }
@@ -215,14 +242,12 @@ class OmokActivity : AppCompatActivity() {
             while(++cr < LINE_NUM && stoneInfo[cr][col] == turn) cnt++
             cr = row
             while(--cr >=0 && stoneInfo[cr][col] == turn) cnt++
-            println(cnt)
             if(cnt >= 5) return true
 
             cnt = 1
             while(++cc < LINE_NUM && stoneInfo[row][cc] == turn) cnt++
             cc =  col
             while(--cc >= 0 && stoneInfo[row][cc] == turn) cnt++
-            println(cnt)
             if(cnt >= 5) return true
 
             cnt = 1
@@ -230,7 +255,6 @@ class OmokActivity : AppCompatActivity() {
             while(--cr >= 0 && --cc >= 0 && stoneInfo[cr][cc] == turn) cnt++
             cr = row; cc = col
             while(++cr < LINE_NUM && ++cc < LINE_NUM && stoneInfo[cr][cc] == turn) cnt++
-            println(cnt)
             if(cnt >= 5) return true
 
             cnt = 1
@@ -238,10 +262,24 @@ class OmokActivity : AppCompatActivity() {
             while(--cr >= 0 && ++cc < LINE_NUM && stoneInfo[cr][cc] == turn) cnt++
             cr = row; cc = col
             while(++cr < LINE_NUM && --cc >= 0 && stoneInfo[cr][cc] == turn) cnt++
-            println(cnt)
             if(cnt >= 5) return true
 
             return false
+        }
+        fun moved() : Boolean{
+            return stoneInfo[rowIdx][colIdx] == 0
+        }
+    }
+
+    private fun highlightUser(){
+        /* If it's my turn, paint myID_textView Yellow.
+         * else paint OpID_textView Yellow. */
+        if(turn == 1) {
+            myID_textView.setBackgroundColor(Color.YELLOW)
+            OpID_textView.setBackgroundColor(Color.WHITE)
+        } else {
+            myID_textView.setBackgroundColor(Color.WHITE)
+            OpID_textView.setBackgroundColor(Color.YELLOW)
         }
     }
     private inner class ReadDataThread : Runnable{
@@ -250,30 +288,44 @@ class OmokActivity : AppCompatActivity() {
         override fun run() {
             var pressed : Boolean = false
             Thread.sleep(1000)
-            while(true){
+            while(!gameOver){
+                println("reader : " + pressed)
                 Thread.sleep(100)
                 pressed = ms.getSwitchPressed()
+                countdown = readTimerFromJNI(GlobalVariable.timer_fd) - 1
+                if(countdown == -1){
+                    turn = 3 - turn
+                    writeTimerFromJNI(GlobalVariable.timer_fd)
+                    handler.post {
+                        highlightUser()
+                    }
+                }
                 if(pressed) {
                     var data = ms.popData()
                     println("Read Data : $data")
                     ms.setSwitchPressed()
+                    if(data == 5 && LockOn.moved()) writeTimerFromJNI(GlobalVariable.timer_fd)
                     LockOn.move(data)
+
                     pressed = false
                     handler.post {
                         drawBoard()
                         highlightUser()
+                        if(gameOver) closeGame()
                     }
                 }
             }
         }
-
     }
-
 
     /**
      * A native method that is implemented by the 'native-lib' native library,
      * which is packaged with this application.
      */
     external fun openSwitchFromJNI() : Int
+    external fun openTimerFromJNI() : Int
+    external fun readTimerFromJNI(fd : Int) : Int
+    external fun writeTimerFromJNI(fd : Int) : Int
     external fun closeFromJNI(fd : Int) : Void
 }
+

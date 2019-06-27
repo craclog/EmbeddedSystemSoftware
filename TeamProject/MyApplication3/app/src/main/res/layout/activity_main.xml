@@ -8,44 +8,40 @@
         tools:context=".MainActivity">
 
     <Button
-            android:text="led ON"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:id="@+id/ledOn_btn"
-            app:layout_constraintTop_toBottomOf="@+id/id_editText" app:layout_constraintStart_toStartOf="parent"
-            android:layout_marginStart="8dp"
-            android:layout_marginBottom="8dp" app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@+id/ledOff_btn" android:layout_marginEnd="8dp"
-            android:layout_marginTop="8dp" app:layout_constraintHorizontal_bias="0.925"/>
-    <Button
-            android:text="LED OFF"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:id="@+id/ledOff_btn"
-            app:layout_constraintTop_toTopOf="@+id/ledOn_btn"
-            app:layout_constraintStart_toStartOf="parent" android:layout_marginStart="8dp"
-            app:layout_constraintEnd_toEndOf="parent" android:layout_marginEnd="8dp"
-            app:layout_constraintHorizontal_bias="0.743"/>
-    <Button
             android:text="Game Start"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:id="@+id/start_btn"
-            app:layout_constraintTop_toTopOf="@+id/ledOff_btn" app:layout_constraintStart_toEndOf="@+id/ledOff_btn"
-            android:layout_marginStart="8dp" app:layout_constraintEnd_toEndOf="parent" android:layout_marginEnd="8dp"
-            app:layout_constraintHorizontal_bias="0.719"/>
+            app:layout_constraintEnd_toEndOf="parent" android:layout_marginEnd="8dp"
+            app:layout_constraintStart_toEndOf="@+id/imageView2" android:layout_marginStart="8dp"
+            android:layout_marginBottom="8dp" app:layout_constraintBottom_toBottomOf="parent" android:textSize="30sp"
+            android:layout_marginTop="8dp" app:layout_constraintTop_toBottomOf="@+id/id2_editText"/>
     <EditText
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:inputType="textPersonName"
-            android:text="Name"
+            android:text="Player1 Name"
             android:ems="10"
-            android:id="@+id/id_editText" android:layout_marginStart="8dp"
-            app:layout_constraintStart_toStartOf="parent" android:layout_marginEnd="8dp"
-            app:layout_constraintEnd_toEndOf="parent" android:layout_marginBottom="8dp"
+            android:id="@+id/id1_editText"
+            android:layout_marginEnd="8dp"
+            app:layout_constraintEnd_toEndOf="parent"
             android:layout_marginTop="8dp"
-            app:layout_constraintTop_toTopOf="parent" app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintHorizontal_bias="0.763" app:layout_constraintVertical_bias="0.273"/>
+            app:layout_constraintTop_toTopOf="parent" android:layout_marginBottom="8dp"
+            app:layout_constraintBottom_toBottomOf="parent" app:layout_constraintVertical_bias="0.26"
+            app:layout_constraintStart_toEndOf="@+id/imageView2" android:layout_marginStart="8dp"/>
+    <EditText
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:inputType="textPersonName"
+            android:text="Player2 Name"
+            android:ems="10"
+            android:id="@+id/id2_editText"
+            android:layout_marginEnd="8dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginTop="8dp"
+            app:layout_constraintTop_toBottomOf="@+id/id1_editText" android:layout_marginBottom="8dp"
+            app:layout_constraintBottom_toBottomOf="parent" app:layout_constraintVertical_bias="0.0"
+            app:layout_constraintStart_toStartOf="@+id/id1_editText" app:layout_constraintHorizontal_bias="0.0"/>
     <ImageView
             android:layout_width="450dp"
             android:layout_height="300dp" app:srcCompat="@drawable/omok_gray"

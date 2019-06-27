@@ -4,13 +4,10 @@ import android.content.Intent
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import kotlinx.android.synthetic.main.activity_main.*
-import android.content.ComponentName
-import android.content.Context
-import android.os.IBinder
-import android.content.ServiceConnection
 
 object GlobalVariable {
     var fd : Int = 0
+    var timer_fd : Int = 0
 }
 lateinit var ms : MyReaderService
 
@@ -24,22 +21,10 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
 
-
-//        ledOn_btn.setOnClickListener {
-//            val ret = readSwitchFromJNI(GlobalVariable.fd)
-//            println("Return value : %d".format(ret))
-//        }
-//        ledOff_btn.setOnClickListener {
-//            val pressed = ms.getSwitchPressed()
-//            if(pressed) {
-//                println("Read Data : " + ms.popData())
-//                ms.setSwitchPressed()
-//            }
-//            else println("No Data")
-//        }
         start_btn.setOnClickListener{
             val intent = Intent(this, OmokActivity::class.java)
-            intent.putExtra("id", id_editText.text.toString())
+            intent.putExtra("id1", id1_editText.text.toString())
+            intent.putExtra("id2", id2_editText.text.toString())
             startActivity(intent)
         }
 
